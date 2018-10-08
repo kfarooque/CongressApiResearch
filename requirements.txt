@@ -1,0 +1,7 @@
+# Python 3.7.0 #
+
+# Packages #
+datetime >= 4.3
+requests >= 2.19.1
+numpy >= 1.15.1
+pandas >= 0.23.4
