@@ -8,6 +8,7 @@ import requests
 import datetime as dt
 import numpy as np
 import pandas as pd
+from bs4 import BeautifulSoup
 
 
 # GENERAL #
@@ -58,6 +59,43 @@ def fix_json_escapes(infile, outfile):
     with open(outfile, "w", encoding='utf8') as file:
         file.write(''.join(newlines))
     return None
+
+
+def search_directory_files(scan, filepattern):
+    """
+    Scan a directory and its subdirectories for files with the given pattern.
+    :param scan: string, directory to scan for files
+    :param filepattern: r-string, regex pattern of file to scan (remember to escape your \. - e.g., r'file\.txt')
+    :return: list of full paths where the file was found
+    """
+    files_found = []
+    for root, directories, filenames in os.walk(scan):
+        for filename in filenames:
+            if re.search(filepattern, filename) is not None:
+                files_found.append(os.path.join(root, filename))
+    files_found = [re.sub(r'\\', '/', file) for file in files_found]
+    return files_found
+
+
+def import_multiple_files(files, sep='\t'):
+    """
+    Build combined dataframe of results files.
+    :param files: string or list of strings, full path of text file(s) to read in
+    :param sep: string, separator character to use for delimiters
+    :return: data frame with all files read in, plus extra field 'sourcefile' that is the file that was read in
+    """
+    if type(files) == str:
+        files = [files]
+    df_all = pd.DataFrame()
+    for file in files:
+        if os.path.isfile(file):
+            with open(file, 'r', encoding='utf8') as fileopen:
+                df = pd.read_table(fileopen, sep=sep)
+            df['sourcefile'] = file
+        else:
+            df = pd.DataFrame({'sourcefile': file}, index=[0])
+        df_all = df_all.append(df)
+    return df_all
 
 
 # DOWNLOADING FROM API #
@@ -222,8 +260,8 @@ def output_api_data_to_json(api_data, outfile):
 
 def output_api_data_to_txt(api_data, outfile, sep=','):
     """
-    Output API data (list of dictionaries) to text file formatted from a dataframe
-    :param api_data: list of dictionaries, from API results
+    Output API data (dataframe or list of dictionaries) to text file formatted from a dataframe
+    :param api_data: dataframe or list of dictionaries, from API results
     :param outfile: string, path and file to store results
     :param sep: string, separator to use between fields
     :return: None, results written to file
@@ -249,3 +287,34 @@ def define_api_result_message(results, api_url):
         "Request URL: " + api_url
     ]
     return out_message
+
+
+# DOWNLOADING FROM OTHER URLS #
+
+
+def download_from_url_govtrack_bill_text(url):
+    """
+    Download bill text from a govtrack URL.
+    :param url: string, URL from which to download bill text
+    :return: string with full text of bill taken from govtrack
+    """
+    try:
+        html_request = requests.get(url)
+        html_soup = BeautifulSoup(html_request.text, features="html.parser")
+        html_main = html_soup.find('div', {'id': 'main_text_content'})
+        if html_main is not None:
+            html_text = html_main.find_all(text=True)
+            html_text_combined = ''.join(html_text)
+            html_text_combined = re.sub(r'\n+', '\n', html_text_combined)
+            html_text_combined = re.sub(r' +', ' ', html_text_combined)
+            html_text_combined = re.sub(r'\t', '    ', html_text_combined)
+            html_text_combined = re.sub(r'^[\n\t ]+|[\n\t ]+$', '', html_text_combined)
+            html_text_combined = re.sub(r'\"', '\'', html_text_combined)
+        else:
+            html_text_combined = '[ERROR] Could not obtain text.'
+            print('ERROR WHEN TRYING TO OBTAIN TEXT IN: ' + url)
+    except requests.exceptions.RequestException as e:
+        html_text_combined = '[ERROR] ' + str(e)
+        print('ERROR WHEN TRYING TO REQUEST FROM: ' + url)
+        print(e)
+    return html_text_combined

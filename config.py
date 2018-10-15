@@ -10,15 +10,19 @@ import re
 infile_keys = ".keys"
 outpath_data = "data/"
 
-# PARAMETERS #
+# PARAMETERS - GET API RESULTS #
 
 max_results = 100
 endpoint = "bills/search.json"
 query = ["tax shelter", "loophole"]
 
+# PARAMETERS - GET TEXT BILLS #
+
+bills_overwrite = False
+
 # PASS SYSTEM ARGUMENTS #
 
-if re.search('(^|\\/|\\\)(main|config)\\.py$', sys.argv[0]):
+if re.search('(^|\\/|\\\)(get_api_results)\\.py$', sys.argv[0]):
     if len(sys.argv) >= 2:
         max_results = int(sys.argv[1])
     if len(sys.argv) >= 3:
@@ -33,11 +37,3 @@ if re.search('(^|\\/|\\\)(main|config)\\.py$', sys.argv[0]):
             query = sys.argv[3:len(sys.argv)]
         if type(query) == str:
             query = [query]
-
-# PRINT PARAMETERS #
-
-print("Parameters:")
-print("max_results = " + str(max_results))
-print("endpoint = " + endpoint)
-print("query = " + str(query))
-print("-" * 64)

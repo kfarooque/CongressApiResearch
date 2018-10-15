@@ -4,6 +4,14 @@
 import config as c
 import functions as f
 
+# PRINT PARAMETERS #
+
+print("Parameters:")
+print("max_results = " + str(c.max_results))
+print("endpoint = " + c.endpoint)
+print("query = " + str(c.query))
+print("-" * 64)
+
 # SEND REQUEST #
 
 api_key = f.extract_value_from_file(c.infile_keys, "api_key")
