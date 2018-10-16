@@ -7,9 +7,16 @@ import os
 import re
 import pandas as pd
 
+# PRINT PARAMETERS #
+
+print("Parameters:")
+print("bills_path = " + c.bills_path)
+print("existing bills.txt files will " + ("" if c.bills_overwrite else "not ") + "be replaced")
+print("-" * 64)
+
 # LOAD FILES #
 
-files_results = f.search_directory_files(c.outpath_data, r'results\.txt$')
+files_results = f.search_directory_files(c.bills_path, r'results\.txt$')
 df_results = f.import_multiple_files(files_results)
 df_results['bill_url'] = [url + '/text' for url in df_results['govtrack_url']]
 df_results = df_results[['sourcefile', 'bill_id', 'bill_url']]

@@ -3,7 +3,6 @@
 
 import sys
 import ast
-import re
 
 # INPUTS/OUTPUTS #
 
@@ -18,11 +17,12 @@ query = ["tax shelter", "loophole"]
 
 # PARAMETERS - GET TEXT BILLS #
 
+bills_path = outpath_data
 bills_overwrite = False
 
 # PASS SYSTEM ARGUMENTS #
 
-if re.search('(^|\\/|\\\)(get_api_results)\\.py$', sys.argv[0]):
+if sys.argv[0].endswith('get_api_results.py'):
     if len(sys.argv) >= 2:
         max_results = int(sys.argv[1])
     if len(sys.argv) >= 3:
@@ -37,3 +37,11 @@ if re.search('(^|\\/|\\\)(get_api_results)\\.py$', sys.argv[0]):
             query = sys.argv[3:len(sys.argv)]
         if type(query) == str:
             query = [query]
+if sys.argv[0].endswith('get_text_bills.py'):
+    if len(sys.argv) >= 2:
+        bills_path = sys.argv[1]
+    if len(sys.argv) >= 3:
+        if sys.argv[2].lower() == 'overwrite':
+            bills_overwrite = True
+        else:
+            bills_overwrite = False

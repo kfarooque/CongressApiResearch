@@ -21,7 +21,7 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
 # Contents
 
 ### Scripts
-* `get_api_results.py` downloads data from Congress API into `results.txt` files
+* `get_api_results.py` downloads data from Congress API into `results.json` and `results.txt` files
 * `get_text_bills.py` downloads bill text from GovTrack into `bills.txt` files
 * `config.py` defines operational parameters and filenames
 * `functions.py` contains all user-defined functions
@@ -42,7 +42,7 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
     * `message.txt`: message with date, request, query, and number of results
     * `results.json`: JSON file with combined results of request
     * `results.txt`: tab-delimited text file with combined results of request
-    * `bills.txt`: tab-delimited text file with full text of any bills contained in `results.txt`
+    * `bills.txt`: tab-delimited text file with full text of any bills obtained in request
 
 # Operation
 
@@ -134,22 +134,23 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
 ## Get Text of Bills (`get_text_bills.py`)
 
 #### Option 1: Run from command line
-1. Run `get_text_bills.py` from the command line (this does not require any arguments):
+1. Run `get_text_bills.py` from the command line with arguments for the bills to scan, in the format:
     ```
-    python get_text_bills.py
+    python get_text_bills.py <bills_path> [overwrite]
     ```
-    * This will scan every `results.txt` file in the the output path (see `config.py` parameter `outpath_data`) for bills to download.
-    * For each bill where there is not a `bills.txt` file in the output path, or there is one but the bill text was not downloaded, this will download and place output in the existing or a new `bills.txt` file.
+    * `<bills_path>` = string; path (as subdirectory of this folder) to search for `results.txt` files, which will be used to identify which bills to download.
+    * `[overwrite]` = string; define as `overwrite` to force process to overwrite all existing `bills.txt` files, instead of only downloading bills whose information is not downloaded yet.
 2. Check new output in the `data` subfolder.
-3. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the `config.py` parameter `bills_overwrite` is `True`).
+3. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the parameter `overwrite` parameter is set).
 
 #### Option 2: Run from python interpreter
 1. Update `config.py` parameters if necessary:
     * `infile_keys` = location of the `.keys` file with your API key (default `".keys"`).
-    * `outpath_data` = root path for outputs, and path that will be scanned for any `results.txt` files (default `"data/"`).
-    * `bills_overwrite` = whether existing `bills.txt` files found in output will be overwritten even if they already contain bill text.
+    * `outpath_data` = root path for outputs where `results.txt` files are stored (default `"data/"`).
+    * `bills_path` = string; path (as subdirectory of this folder) to search for `results.txt` files, which will be used to identify which bills to download.
+    * `bills_overwrite` = boolean; whether to force process to overwrite all existing `bills.txt` files, instead of only downloading bills whose information is not downloaded yet.
 2. Run the `get_text_bills.py` script from a python interpreter.
-    * This will scan every `results.txt` file in the the output path (see `config.py` parameter `outpath_data`) for bills to download.
+    * This will scan for bills to download using every `results.txt` file in the path specified by `bills_path` in `config.py`.
     * For each bill where there is not a `bills.txt` file in the output path, or there is one but the bill text was not downloaded, this will download and place output in the existing or a new `bills.txt` file.
 3. Check new output in the `data` subfolder.
 4. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the `config.py` parameter `bills_overwrite` is `True`).
