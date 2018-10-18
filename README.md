@@ -1,8 +1,8 @@
 # Congress API - Download Results
 
-Generalized method for extracting information from ProPublica's Congress API and GovTrack, related to US Congress bills, committees, lobbying data, etc. 
-This uses ProPublica's Congress API to build a data set based on specific keyword(s) searches and separated by type of data.
-This also uses GovTrack to pull text for bills that were found during the keyword(s) searches.
+Generalized method for extracting information from ProPublica's Congress API and GovTrack, related to US Congress bills, committees, lobbying data, etc. It:
+* Uses ProPublica's Congress API to build a data set based on specific keyword(s) searches and separated by type of data.
+* Uses GovTrack to pull text for bills that were found during the keyword(s) searches.
 
 Currently, this works well for bills (e.g., using endpoints `bills/search.json`, `115/senate/bills/enacted.json`, or `bills/upcoming/house.json`). It does *not* work well with lobbying (e.g., using endpoints `lobbying/search.json` or `lobbying/latest.json`).
 
@@ -22,8 +22,8 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
 
 ### Scripts
 * `get_api_results.py` downloads data from Congress API into `results.json` and `results.txt` files
-* `get_text_bills.py` downloads bill text from GovTrack into `bills.txt` files
-* `config.py` defines operational parameters and filenames
+* `get_text_bills.py` downloads bill text from GovTrack into `bills/*.txt` files
+* `config.py` defines files and operational parameters
 * `functions.py` contains all user-defined functions
 
 ### Other Files
@@ -36,13 +36,14 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
 * [GovTrack: Bills and Resolutions](https://www.govtrack.us/congress/bills/) (not part of repository): Site from which bill text is pulled; see site documentation for details.
 
 ### Outputs
-* `data/<sub1>/<sub2>`: results of request are downloaded and saved to subfolder.
+* `data/<sub1>/<sub2>`: stores results of request to ProPublica Congress API via `get_api_results.py`.
     * `<sub1>` subfolder name based on request URL (e.g., bills_search)
     * `<sub2>` subfolder name based on query (e.g., tax_shelter_loophole)
     * `message.txt`: message with date, request, query, and number of results
     * `results.json`: JSON file with combined results of request
     * `results.txt`: tab-delimited text file with combined results of request
-    * `bills.txt`: tab-delimited text file with full text of any bills obtained in request
+* `data/<sub1>/<sub2>/bills`: stores results of bills downloaded from GovTrack via `get_text_bills.txt`.
+    * `*.txt`: full text of bills, filename is the bill ID.
 
 # Operation
 
@@ -136,11 +137,12 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
 #### Option 1: Run from command line
 1. Run `get_text_bills.py` from the command line with arguments for the bills to scan, in the format:
     ```
-    python get_text_bills.py <bills_path> [overwrite]
+    python get_text_bills.py <bills_path> [options]
     ```
     * `<bills_path>` = string; path (as subdirectory of this folder) to search for `results.txt` files, which will be used to identify which bills to download.
-    * `[overwrite]` = string; define as `overwrite` to force process to overwrite all existing `bills.txt` files, instead of only downloading bills whose information is not downloaded yet.
-2. Check new output in the `data` subfolder.
+    * `[options]` = string(s); option(s) to affect process, separated by spaces -- current valid options:
+        * `overwrite` will force process to overwrite all existing bills in the `bills/` subfolders, instead of only downloading bills whose information is not downloaded yet.
+2. Check new output in the `data/.../bills` subfolders.
 3. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the parameter `overwrite` parameter is set).
 
 #### Option 2: Run from python interpreter
@@ -148,9 +150,9 @@ Currently, this works well for bills (e.g., using endpoints `bills/search.json`,
     * `infile_keys` = location of the `.keys` file with your API key (default `".keys"`).
     * `outpath_data` = root path for outputs where `results.txt` files are stored (default `"data/"`).
     * `bills_path` = string; path (as subdirectory of this folder) to search for `results.txt` files, which will be used to identify which bills to download.
-    * `bills_overwrite` = boolean; whether to force process to overwrite all existing `bills.txt` files, instead of only downloading bills whose information is not downloaded yet.
+    * `bills_overwrite` = boolean; whether to force process to overwrite all existing bills in the `bills/` subfolders, instead of only downloading bills whose information is not downloaded yet.
 2. Run the `get_text_bills.py` script from a python interpreter.
     * This will scan for bills to download using every `results.txt` file in the path specified by `bills_path` in `config.py`.
-    * For each bill where there is not a `bills.txt` file in the output path, or there is one but the bill text was not downloaded, this will download and place output in the existing or a new `bills.txt` file.
-3. Check new output in the `data` subfolder.
-4. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the `config.py` parameter `bills_overwrite` is `True`).
+    * For each bill where there is not a file in the `bills/` subfolder, this will download and place output there.
+3. Check new output in the `data/.../bills` subfolders.
+4. (Optional) You may need to re-run this program if it could not download all bills' text the first time (it will only re-download anything that it failed to download the first time, unless the `config.py` parameter `bills_overwrite` is `True`.

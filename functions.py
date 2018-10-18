@@ -77,6 +77,38 @@ def search_directory_files(scan, filepattern):
     return files_found
 
 
+def scan_file_headers(files, seps='\t'):
+    """
+    Detect file headers and delimiters in one or more fules.
+    :param files: string or list of strings, full path of text file(s) to scan
+    :param seps: string or list of strings, separator character(s) that are likely used as delimiters
+    :return:
+    """
+    if type(files) == str:
+        files = [files]
+    if type(seps) == str:
+        seps = [seps]
+    df_all = pd.DataFrame()
+    for file in files:
+        if os.path.isfile(file):
+            with open(file, 'r', encoding='utf8') as fileopen:
+                line = fileopen.readline()
+                line = re.sub('^\n+|\n+$', '', line)
+            seps_count = [line.count(sep) for sep in seps]
+            seps_max_index = seps_count.index(max(seps_count))
+            line_sep = seps[seps_max_index]
+            # line_headers = line.split(line_sep)
+            df = pd.DataFrame({
+                'sourcefile': file,
+                'separator': line_sep,
+                'headers': line
+            }, index=[0])
+        else:
+            df = pd.DataFrame({'sourcefile': file}, index=[0])
+        df_all = df_all.append(df)
+    return df_all.reset_index(drop=True)
+
+
 def import_multiple_files(files, sep='\t'):
     """
     Build combined dataframe of results files.
@@ -95,7 +127,7 @@ def import_multiple_files(files, sep='\t'):
         else:
             df = pd.DataFrame({'sourcefile': file}, index=[0])
         df_all = df_all.append(df)
-    return df_all
+    return df_all.reset_index(drop=True)
 
 
 # DOWNLOADING FROM API #
@@ -304,12 +336,18 @@ def download_from_url_govtrack_bill_text(url):
         html_main = html_soup.find('div', {'id': 'main_text_content'})
         if html_main is not None:
             html_text = html_main.find_all(text=True)
-            html_text_combined = ''.join(html_text)
-            html_text_combined = re.sub(r'\n+', '\n', html_text_combined)
-            html_text_combined = re.sub(r' +', ' ', html_text_combined)
-            html_text_combined = re.sub(r'\t', '    ', html_text_combined)
-            html_text_combined = re.sub(r'^[\n\t ]+|[\n\t ]+$', '', html_text_combined)
-            html_text_combined = re.sub(r'\"', '\'', html_text_combined)
+            # join text entries
+            html_text_combined = ' '.join(html_text)
+            # remove new lines and whitespace at start and end of lines
+            html_text_combined = re.sub(r'^[\n\t ]+', '', html_text_combined)
+            html_text_combined = re.sub(r'[\n\t ]+$', '', html_text_combined)
+            html_text_combined = re.sub(r'\n[\t ]+', '\n', html_text_combined)
+            html_text_combined = re.sub(r'[\t ]+\n', '\n', html_text_combined)
+            # shorten multiple new lines, tabs, and spaces
+            html_text_combined = re.sub(r'\n{2,}', '\n\n', html_text_combined)
+            html_text_combined = re.sub(r'[\t ]+', ' ', html_text_combined)
+            # re-do indentations
+            html_text_combined = re.sub(r'(\n\d+\. )(.*)(: )(\(\w+\))', r'\1\2:\n\4', html_text_combined)
         else:
             html_text_combined = '[ERROR] Could not obtain text.'
             print('ERROR WHEN TRYING TO OBTAIN TEXT IN: ' + url)

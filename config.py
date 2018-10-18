@@ -34,14 +34,11 @@ if sys.argv[0].endswith('get_api_results.py'):
             if query[0] == '[' and query[len(query)-1] == ']':
                 query = ast.literal_eval(query)
         else:
-            query = sys.argv[3:len(sys.argv)]
+            query = sys.argv[3:]
         if type(query) == str:
             query = [query]
 if sys.argv[0].endswith('get_text_bills.py'):
     if len(sys.argv) >= 2:
         bills_path = sys.argv[1]
     if len(sys.argv) >= 3:
-        if sys.argv[2].lower() == 'overwrite':
-            bills_overwrite = True
-        else:
-            bills_overwrite = False
+        bills_overwrite = ['overwrite' in argument.lower() for argument in sys.argv[2:]]
