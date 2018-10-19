@@ -4,3 +4,4 @@ Set of tools for research using ProPublica's Congress API and other related tool
 
 Project folders:
 * **DownloadResults**: Generalized method for extracting information from ProPublica's Congress API and GovTrack, related to US Congress bills, committees, lobbying data, etc.
+* **ExploreBillTrends_R**: Explore trends in bills based on data downloaded via ProPublica's Congress API. **[WIP]**
