@@ -1,7 +1,1 @@
 .idea
-__pycache__
-*.py[cod]
-data
-.keys
-*.sh
-*.bat
