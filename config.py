@@ -17,7 +17,7 @@ query = ["tax shelter", "loophole"]
 
 # PARAMETERS - GET TEXT BILLS #
 
-bills_path = outpath_data
+bills_path = outpath_data + "bills_search"
 bills_overwrite = False
 
 # PASS SYSTEM ARGUMENTS #

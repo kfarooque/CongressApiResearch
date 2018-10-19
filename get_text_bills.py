@@ -5,8 +5,6 @@ import config as c
 import functions as f
 import os
 import re
-import pandas as pd
-import numpy as np
 
 # PRINT PARAMETERS #
 
@@ -31,19 +29,27 @@ df_results = df_results.drop_duplicates(['sourcefile', 'bill_id'])
 # DOWNLOAD FILES #
 
 for sourcefile in df_results['sourcefile'].unique():
-    df_bills = df_results.loc[df_results['sourcefile'] == sourcefile, ['bill_id', 'bill_url']]
     outpath = re.sub(r'results\.txt$', 'bills/', sourcefile)
+    outindex = outpath + "_index_.txt"
+    df_bills = df_results.loc[df_results['sourcefile'] == sourcefile, ['bill_id', 'bill_url']]
+    df_bills['filename'] = [re.sub('[^A-Za-z0-9\\-]', '', id) + '.txt' for id in df_bills['bill_id']]
+    df_bills['downloaded'] = ['Y' if os.path.isfile(outpath + filename) else 'N' for filename in df_bills['filename']]
     if not os.path.isdir(outpath):
         os.makedirs(outpath)
     for index, row in df_bills.iterrows():
-        text_path = outpath + re.sub('[^A-Za-z0-9\\-]', '', row['bill_id']) + '.txt'
+        text_path = outpath + row['filename']
         text_content = ''
         if not os.path.isfile(text_path) or c.bills_overwrite:
             text_content = f.download_from_url_govtrack_bill_text(row['bill_url'])
             if text_content == '':
                 print('ERROR WHEN TRYING TO DOWNLOAD FROM URL: ' + row['bill_url'])
+                df_bills.loc[index, 'downloaded'] = 'N'
             elif text_content[0:7] == '[ERROR]':
                 print(text_content)
+                df_bills.loc[index, 'downloaded'] = 'N'
             else:
                 with open(text_path, "w", encoding='utf8') as file:
                     file.write(text_content)
+                df_bills.loc[index, 'downloaded'] = 'Y'
+    with open(outindex, "w", encoding='utf8') as file:
+        df_bills.to_csv(file, sep="\t", header=True, index=False, encoding="utf-8")
