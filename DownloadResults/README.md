@@ -1,4 +1,4 @@
-# Congress API - Download Results
+# Congress API Research - Download Results
 
 Generalized method for extracting information from ProPublica's Congress API and GovTrack, related to US Congress bills, committees, lobbying data, etc. It:
 * Uses ProPublica's Congress API to build a data set based on specific keyword(s) searches and separated by type of data.
