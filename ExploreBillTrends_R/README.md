@@ -11,8 +11,8 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 # Contents
 
 ### Scripts
-* `01_BuildData.R` builds and formats results data
-* {}
+* `01_ImportData.R` imports results data and creates stop word list
+* `02_BuildTokens.R` trains data and build tokens, document-term matrices
 * `config.R` defines parameters for files and operation
 * `functions.R` contains all user-defined functions
 
@@ -21,7 +21,8 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 * `*.Rproj` R project file
 
 ### Inputs
-* `*/results.txt` (not part of repository) tab-delimited text files with data obtained from the Congress API for bills, based on output of the separate project [CongressApi_DownloadResults](https://github.com/kfarooque/CongressApi_DownloadResults). Any number of text files can be read in.
+* `resources/stop_list_manual.txt` text file with optional manual stop list to incorporate
+* `../*/results.txt` (not part of repository) tab-delimited text files with data obtained from the Congress API for bills, based on output of the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults). Any number of text files can be read in.
 
 ### Outputs
 * {}

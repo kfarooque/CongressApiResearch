@@ -10,7 +10,7 @@ lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.p
 rm(reqPackages)
 
 
-#### BUILD DATA ####
+#### IMPORT DATA ####
 
 
 ImportMultipleResults <- function(files, header=TRUE, sep="\t", quote="", addSource=TRUE) {
@@ -179,3 +179,153 @@ FormatResultsFull <- function(df) {
   )
 }
 
+
+#### BUILD STOPLIST ####
+
+
+BuildTokensTfidf <- function(text, id=NULL, ngram=1) {
+  #' Build dataframe of tokens, counts, and tf-idf (term-freq/inverse-doc-freq) measures.
+  #' Args:
+  #'   text: vector of text entries to use to create tokens
+  #'   id: vector of identifiers for text (if blank then will use numbers)
+  #'   ngram: number of words to use in tokens (e.g., 1 = words, 2 = bigrams, 3 = trigrams)
+  #' Returns:
+  #'   dataframe with id, term, n (count), tf, idf, and tf_idf columns
+  if (is.null(id)) {
+    id <- 1:length(text)
+  }
+  df <- data.frame(stringsAsFactors=FALSE, id=id, text=text)
+  if (ngram == 1) {
+    tokens <- unnest_tokens(df, term, text, token="words")
+  } else {
+    tokens <- unnest_tokens(df, term, text, token="ngrams", n=ngram)
+  }
+  counts <- group_by(tokens, id) %>%
+    count(term) %>%
+    ungroup() %>%
+    arrange(id, desc(n)) %>%
+    bind_tf_idf(term, id, n)
+  counts
+}
+
+
+BuildCommonRareTerms <- function(df, nCommon=0.01, nRare=0.01, filterMinDocs=2, filterNumbers=TRUE) {
+  #' Build list of most and least common terms from dataframe with tf-idf measures.
+  #' Args:
+  #'   df: dataframe with columns "term", "n", and "tf_idf" 
+  #'       (output by dfTokens() or by unnest_tokens() and bind_tf_idf())
+  #'   nCommon: number (if >1) or percent (if <1) of terms to include in 'common' list
+  #'   nRare: number (if >1) or percent (if <1) of terms to include in 'rare' list
+  #'   filterMinDocs: minimum number of docs a term needs to be in for either list (default 2)
+  #'   filterNumbers: whether to filter out numbers
+  #' Returns:
+  #'   list of two vectors: $common = vector of common terms, $rare = vector of rare terms
+  dfSum <- group_by(df, term) %>%
+    summarize(n=sum(n), tf_idf=mean(tf_idf))
+  if (filterMinDocs > 0) {
+    dfSum <- dfSum[dfSum$n > filterMinDocs, ]
+  }
+  if (filterNumbers) {
+    dfSum <- dfSum[!grepl("^.{,3}\\d+", dfSum$term), ]
+    dfSum <- dfSum[!grepl("^m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$", dfSum$term), ]
+  }
+  indexCommon <- order(dfSum$tf_idf, decreasing=FALSE)
+  indexRare <- order(dfSum$tf_idf, decreasing=TRUE)
+  if (is.na(nCommon)) {
+    termsCommon <- c()
+  } else if (nCommon == 0) {
+    termsCommon <- c()
+  } else if (nCommon < 1) {
+    nCommon <- round(nrow(dfSum) * nCommon)
+    termsCommon <- unlist(dfSum[indexCommon[1:nCommon], "term"])
+    names(termsCommon) <- NULL
+  } else {
+    termsCommon <- unlist(dfSum[indexCommon[1:nCommon], "term"])
+    names(termsCommon) <- NULL
+  }
+  if (is.na(nRare)) {
+    termsRare <- c()
+  } else if (nRare == 0) {
+    termsRare <- c()
+  } else if (nRare < 1) {
+    nRare <- round(nrow(dfSum) * nRare)
+    termsRare <- unlist(dfSum[indexRare[1:nRare], "term"])
+    names(termsRare) <- NULL
+  } else {
+    termsRare <- unlist(dfSum[indexRare[1:nRare], "term"])
+    names(termsRare) <- NULL
+  }
+  list(common=termsCommon, rare=termsRare)
+}
+
+
+BuildStopList <- function(vectors=NULL, manual=NULL, auto=TRUE) {
+  #' Build a stop list based on automatic sources, vector(s) of terms, and manual import.
+  #' Args:
+  #'   vectors: vector or list of vectors with stop words
+  #'   manual: string with path of file to import with stop words (one term per line)
+  #'   auto: boolean, whether to use the automatic stop list from the tidytext package
+  #' Returns:
+  #'   vector of terms that can be used as stop list
+  if (!is.null(vectors)) {
+    stopwordsBuilt <- unlist(vectors)
+  } else {
+    stopwordsBuilt <- c()
+  }
+  if (!is.null(manual)) {
+    if (file.info(INPUT_STOPLIST)$size != 0) {
+      stopwordsImported <- read.table(manual, header=FALSE, stringsAsFactors=FALSE,
+                                      sep="\n", quote="", na.strings="")
+      stopwordsImported <- unlist(stopwordsImported)
+      stopwordsImported <- stopwordsImported[gsub("\\s*", "", stopwordsImported) != ""]
+    } else {
+      stopwordsImported <- c()
+    }
+  } else {
+    stopwordsImported <- c()
+  }
+  if (auto) {
+    data(stop_words)
+    stopwordsDefault <- stop_words[stop_words$lexicon == "SMART", "word"]
+  } else {
+    stopwordsDefault <- c()
+  }
+  stopwords <- unique(unlist(c(stopwordsBuilt, stopwordsImported, stopwordsDefault)))
+  stopwords[order(stopwords)]
+}
+
+
+#### BUILD TOKENS ####
+
+
+BuildTokensCleaned <- function(text, id=NA, ngram=1, stoplist=NULL) {
+  #' Build dataframe of tokens, cleaned, for further parsing.
+  #' Args:
+  #'   text: vector of text entries to use to create tokens
+  #'   id: vector of identifiers for text (if blank then will use numbers)
+  #'   ngram: number of words to use in tokens (e.g., 1 = words, 2 = bigrams, 3 = trigrams)
+  #'   stoplist = vector of terms in stop list
+  #' Returns:
+  #'   dataframe with id, term (cleaned), n (count)
+  # Clean terms
+  cleaned <- iconv(text, to="UTF-8", sub="?")
+  #TODO: add more cleaning steps here
+  # Build initial data
+  if (is.null(id)) {
+    id <- 1:length(text)
+  }
+  df <- data.frame(stringsAsFactors=FALSE, id=id, text=cleaned)
+  # Build tokens
+  if (ngram == 1) {
+    tokens <- unnest_tokens(df, term, text, token="words")
+  } else if (ngram >= 2) {
+    tokens <- unnest_tokens(df, term, text, token="ngrams", n=n)
+  }
+  if (!is.null(stoplist)) {
+    tokens <- filter(tokens, !(term %in% stoplist))
+  }
+  tokenCounts <- group_by(tokens, id) %>%
+    count(term) %>%
+    ungroup()
+  tokenCounts
+}
