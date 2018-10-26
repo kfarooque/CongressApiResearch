@@ -91,6 +91,31 @@ ImportCongressApiResults <- function(files, header=TRUE, sep="\t", quote="") {
 }
 
 
+SpreadJoinColumn <- function(df, colId, colSpread, sep=" ") {
+  #' Spread value of one variable and join them together into single column, by an identifier.
+  #' Args:
+  #'   df: data frame with identifier column and column to spread-and-rejoin
+  #'   colId: name of identifier column
+  #'   colSpread: name of column to spread and rejoin by identifier
+  #'   sep: character(s) used to separate values of column to spread for each identifier
+  #' Returns:
+  #'   data frame with colId and colSpread, and one identifier per row
+  dfOutput <- df[, c(colId, colSpread)]
+  names(dfOutput) <- c("id", "value")
+  dfOutput <- group_by(dfOutput, id) %>%
+    mutate(key = paste0("var", sprintf("%04d", row_number()))) %>%
+    spread(key, value, fill="") %>%
+    unite(value, -id, sep=sep) %>%
+    ungroup()
+  dfOutput$value <- gsub(paste0("^", sep), "", dfOutput$value)
+  dfOutput$value <- gsub(paste0(sep, "$"), "", dfOutput$value)
+  dfOutput$value <- gsub(paste0(sep, "+"), sep, dfOutput$value)
+  dfOutput$value <- trimws(dfOutput$value)
+  names(dfOutput) <- c(colId, colSpread)
+  dfOutput
+}
+
+
 ConvertColumnsCharToOther <- function(df, colsDates=NULL, colsBoolean=NULL, colsNumeric=NULL) {
   #' Convert dataframe columns from character to date, boolean, and numeric
   #' Args:
@@ -142,15 +167,21 @@ ExtractNumberAfterString <- function(text, string) {
 FormatResultsFull <- function(df) {
   #' Format data frame of Congress API results (output of ImportCongressApiResults()),
   #' filtering to unique records and keeping/combining selected fields.
-  #' Uses functions: ConvertColumnsCharToOther(), ExtractNumberAfterString()
+  #' Uses functions: SpreadJoinColumn(), ConvertColumnsCharToOther(), ExtractNumberAfterString()
   #' Args:
   #'   df: data frame with Congress API results (output of ImportCongressApiResults())
   #' Returns:
   #'   list with $information = data frame with bill info, $content = data frame wtih bill text
   #'   data frames have one row per bill_id (using latest action date)
   # Filter rows
-  dfResults <- arrange(df, desc(latest_major_action_date), desc(introduced_date), bill_id)
-  dfResults <- dfResults[!duplicated(dfResults['bill_id']),]
+  dfResults <- arrange(df, desc(latest_major_action_date), desc(introduced_date), bill_id) %>%
+    distinct(bill_id, .keep_all=TRUE) %>%
+    select(-search_type, -search_query)
+  dfSearchType <- SpreadJoinColumn(df, "bill_id", "search_type", sep=" ")
+  dfSearchQuery <- SpreadJoinColumn(df, "bill_id", "search_query", sep=" ")
+  dfSearchQuery$search_query <- gsub("_", " ", dfSearchQuery$search_query)
+  dfResults <- left_join(dfResults, dfSearchType, by="bill_id") %>%
+    left_join(dfSearchQuery, by="bill_id")
   # Format columns
   dfResults <- ConvertColumnsCharToOther(
     dfResults,
@@ -158,7 +189,6 @@ FormatResultsFull <- function(df) {
                 "enacted", "vetoed", "house_passage", "senate_passage"),
     colsBoolean=c("active"),
     colsNumeric=c("cosponsors"))
-  dfResults["search_query"] <- gsub("_", " ", unlist(dfResults["search_query"]))
   # Combine/split columns
   dfResults$cosponsors_dem <- ExtractNumberAfterString(dfResults$cosponsors_by_party, string="D")
   dfResults$cosponsors_rep <- ExtractNumberAfterString(dfResults$cosponsors_by_party, string="R")

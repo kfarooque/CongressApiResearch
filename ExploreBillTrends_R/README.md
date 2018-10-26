@@ -11,8 +11,8 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 # Contents
 
 ### Scripts
-* `01_ImportData.R` imports results data and creates stop word list
-* `02_BuildTokens.R` trains data and build tokens, document-term matrices
+* `01_BuildTermsDocs.R` imports data, creates stop list, and builds terms/docs data.
+* {}
 * `config.R` defines parameters for files and operation
 * `functions.R` contains all user-defined functions
 
