@@ -9,3 +9,7 @@ INPUT_STOPLIST <- file.path("resources", "stop_list_manual.txt")
 
 OUTPUT_ROOT <- file.path("results", "bills_search")
 
+#### PARAMETERS ####
+
+RANDOM_SEED <- 654
+NUMBER_TOPICS <- 8

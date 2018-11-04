@@ -10,6 +10,32 @@ lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.p
 rm(reqPackages)
 
 
+#### GENERAL ####
+
+
+JoinValuesByGroup <- function(x, group, value, sep=";") {
+  #' Spread and join one column in a dataframe by a group. Useful for term lists by group.
+  #' Args:
+  #'   x: dataframe with group column and value column to spread
+  #'   group: name of group column
+  #'   value: name of column with values to spread
+  #'   sep: separator to use between entries in value column per group
+  #' Returns:
+  #'   dataframe with just group and joined value columns
+  dfLong <- group_by(x[, c(group, value)], .dots=group) %>%
+    rename("group"=group, "value"=value) %>%
+    mutate(key = paste0("key", sprintf("%02d", row_number())),
+           value = ifelse(is.na(value), "", value))
+  dfWide <- spread(dfLong, "key", "value", fill="") %>%
+    unite("key", -group, sep=sep) %>%
+    mutate(key = gsub(paste0("(^", sep, ")|(", sep, "$)"), "", key),
+           key = gsub(paste0("(", sep, ")+"), sep, key))
+  retVal <- ungroup(dfWide)[, c("group", "key")]
+  names(retVal) <- c(group, value)
+  retVal
+}
+
+
 #### IMPORT DATA ####
 
 
@@ -359,3 +385,141 @@ BuildTokensCleaned <- function(text, id=NA, ngram=1, stoplist=NULL) {
     ungroup()
   tokenCounts
 }
+
+
+#### MODELING (LDA) ####
+
+
+ApplyTopicToDocuments <- function(x, betas, groupvars=NULL, filterBetas=TRUE, weightByN=TRUE) {
+  #' Apply LDA model's term betas to a tokenized data frame's terms to identify most likely topic.
+  #' This is a shortcut to re-running LDA model with new data added, and may yield different results.
+  #' Args:
+  #'   x: tokenized data frame with one row per term per document, and following columns:
+  #'      group var(s) (including document id), "term" (term present), and "n" (count of term),
+  #'   betas: betas matrix from LDA object with: "term" (terms used), "beta" (beta coefficient), 
+  #'          and "topic" (topic identifier)
+  #'   groupvars: vector of the names of the grouping var(s) in x
+  #'              (if left blank then it will use everything in x except "term" and "n")
+  #'   filterBetas: flag for whether to filter out low-value betas from affecting classification
+  #'                (sets to 0 any betas below the lowest one for a top-ranked term)
+  #'   weightByN: flag for whether to weight terms by number of occurrences in each document
+  #'              (if FALSE then resets term count to 1 per document)
+  #' Returns:
+  #'   Data frame with one row per document, including grouping variables, topic identifier, 
+  #'   and probability.
+  if (is.null(groupvars)) {
+    groupvars <- names(x)[!(names(x) %in% c("term", "n"))]
+  }
+  if (filterBetas) {
+    topBetas <- group_by(betas, term) %>%
+      arrange(term, desc(beta)) %>%
+      filter(row_number() == 1)
+    betasThreshold <- min(topBetas$beta, na.rm=TRUE)
+    betas$beta <- ifelse(betas$beta < betasThreshold, 0, betas$beta)
+  }
+  documentsTopics <- left_join(x, betas, by="term") %>%
+    mutate(n = ifelse(weightByN, n, 1)) %>%
+    mutate(nbeta = ifelse(!is.na(beta), n * beta, 0)) %>%
+    group_by_(.dots=c(groupvars, "topic")) %>%
+    summarize(nbeta = sum(nbeta, na.rm=TRUE))
+  documentsTotal <- group_by(documentsTopics, .dots=c(groupvars)) %>%
+    summarize(total = sum(nbeta, na.rm=TRUE))
+  documentsProbabilities <- left_join(documentsTopics, documentsTotal, by=c(groupvars)) %>%
+    mutate(probability = ifelse(!is.na(total), nbeta / total, 0)) %>%
+    select(-nbeta, -total) %>%
+    arrange(desc(probability)) %>%
+    filter(row_number() == 1)
+  documentsProbabilities
+}
+
+
+ExtractTopicsTopTerms <- function(x, betaFilter=0.001, n=10) {
+  #' Extract top terms per topic, using an LDA betas data frame with topic, term, and beta.
+  #' Args:
+  #'   x: betas data frame with "topic", "term", and "beta" columns.
+  #'   betaFilter: minimum allowable beta value
+  #'   n: number of top terms per topic
+  #' Returns:
+  #'   Data frame with topic, term, and beta, for just the top terms per topic.
+  retVal <- group_by(x, topic) %>%
+    arrange(topic, desc(beta))
+  if (!is.null(betaFilter)) {
+    retVal <- filter(retVal, beta >= betaFilter)
+  }
+  if (!is.null(n)) {
+    retVal <- group_by(retVal, topic) %>%
+      arrange(topic, desc(beta)) %>%
+      filter(row_number() <= n) %>%
+      ungroup()
+  }
+  ungroup(retVal)
+}
+
+
+ExtractTopicsDistinctTerms <- function(x, betaFilter=0.001, n=10) {
+  #' Extract most distinct terms per topic, using an LDA betas data frame with topic, term, and beta.
+  #' Args:
+  #'   x: betas data frame with "topic", "term", and "beta" columns.
+  #'   betaFilter: minimum allowable beta value
+  #'   n: number of distinct terms per topic
+  #' Returns:
+  #'   Data frame with topic, term, and beta, for just the most distinct terms per topic.
+  # topics <- unique(x$topic)[order(unique(x$topic))]
+  # retVal <- mutate(x, topic = paste0("topic", topic))
+  retVal <- x
+  if (!is.null(betaFilter)) {
+    termsDrop <- group_by(retVal, term) %>%
+      summarize(max = max(beta)) %>%
+      filter(max < betaFilter) %>%
+      select(-max) %>%
+      ungroup()
+    retVal <- anti_join(retVal, termsDrop, by="term")
+  }
+  betaSums <- group_by(retVal, term) %>%
+    summarize(betaSum = sum(beta))
+  betaEach <- left_join(retVal, betaSums, by="term") %>%
+    mutate(logratio = log2(beta / (betaSum-beta)),
+           absratio = abs(logratio))
+  retVal <- group_by(betaEach, topic) %>%
+    arrange(topic, desc(absratio))
+  if (!is.null(n)) {
+    retVal <- group_by(retVal, topic) %>%
+      arrange(topic, desc(absratio)) %>%
+      filter(row_number() <= n) %>%
+      ungroup()
+  }
+  select(retVal, topic, term, beta) %>%
+    ungroup()
+}
+
+
+ExtractTopicsTopDocuments <- function(x, gammas=NULL, idcol="id", textcol="text", n=10) {
+  #' Extract most illustrative documents per topic, using a results and optional LDA gammas data frame.
+  #' Args:
+  #'   x: results data frame from joining topics and original document data, with columns:
+  #'      idcol, textcol, "topic", and "probability"
+  #'   idcol: name of identifier column in x
+  #'   textcol: name of text column to return as results in x
+  #'   gammas: optional gammas data frame with "topic", "document", and "gamma" columns.
+  #'   n: number of illustrative documents per topic
+  #' Returns:
+  #'   Data frame with all fields for just the most illustrative documents per topic.
+  docsContent <- group_by(x[,c(idcol, textcol, "topic", "probability")], topic) %>%
+    arrange(topic, desc(probability)) %>%
+    rename("id"=idcol, "text"=textcol)
+  if (!is.null(gammas)) {
+    docsGammas <- mutate(gammas, id = document) %>%
+      select(id, topic, gamma)
+    docsContent <- left_join(docsContent, docsGammas, by=c("id", "topic")) %>%
+      group_by(topic) %>%
+      arrange(topic, desc(probability), desc(gamma))
+  }
+  docsContent <- docsContent[!duplicated(docsContent$text), ]
+  if (!is.null(n)) {
+    docsContent <- filter(docsContent, row_number() <= n)
+  }
+  retVal <- left_join(docsContent[, "id"], x, by=c("id"=idcol))
+  names(retVal)[names(retVal) == "id"] <- idcol
+  retVal
+}
+
