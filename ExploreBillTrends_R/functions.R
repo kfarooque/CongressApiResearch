@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "ggplot2", "ggraph", "igraph")
+reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
@@ -354,18 +354,57 @@ BuildStopList <- function(vectors=NULL, manual=NULL, auto=TRUE) {
 #### BUILD TOKENS ####
 
 
-BuildTokensCleaned <- function(text, id=NA, ngram=1, stoplist=NULL) {
+StemWordsHunspell <- function(text) {
+  #' Apply stemming to vector of text entries or individual terms. Uses hunspell dictionary.
+  #' Args:
+  #'   text: vector of text entries or individual terms
+  #' Returns:
+  #'   vector with each word replaced by stem
+  temp_Stemmer <- function(term) {
+    #' Stemmer, based on https://cran.r-project.org/web/packages/corpus/vignettes/stemmer.html
+    stems <- hunspell::hunspell_stem(term)[[1]] # look up term in dictionary
+    if (length(stems) == 0) { # if there are no stems, use the original term
+      stem <- term
+    } else { # if there are multiple stems, use the last one
+      stem <- stems[[length(stems)]]
+    }
+    stem
+  }
+  stemmedList <- text_tokens(text, stemmer=temp_Stemmer)
+  stemmedVector <- c()
+  for (i in 1:length(stemmedList)) {
+    entry <- paste(stemmedList[[i]], collapse=" ")
+    entry <- gsub("([\\(\\$#@]) ", "\\1", entry) # remove space after this punctuation
+    entry <- gsub(" ([\\):;,\\.\\?!%])", "\\1", entry) # remove space before this punctuation
+    entry <- gsub("'s", "", entry)
+    entry <- gsub("s'", "s", entry)
+    stemmedVector[i] <- entry
+  }
+  stemmedVector
+}
+
+
+BuildTokensCleaned <- function(text, id=NA, ngram=1, stoplist=NULL, stemWords=FALSE, dropNumbers=FALSE) {
   #' Build dataframe of tokens, cleaned, for further parsing.
+  #' Uses functions: StemWordsHunspell()
   #' Args:
   #'   text: vector of text entries to use to create tokens
   #'   id: vector of identifiers for text (if blank then will use numbers)
   #'   ngram: number of words to use in tokens (e.g., 1 = words, 2 = bigrams, 3 = trigrams)
-  #'   stoplist = vector of terms in stop list
+  #'   stoplist: vector of terms in stop list
+  #'   stemWords: whether to apply word stemming
+  #'   dropNumbers: whether to drop numbers from tokens
   #' Returns:
   #'   dataframe with id, term (cleaned), n (count)
   # Clean terms
   cleaned <- iconv(text, to="UTF-8", sub="?")
-  #TODO: add more cleaning steps here
+  if (stemWords) {
+    cleaned <- StemWordsHunspell(cleaned)
+  }
+  if (dropNumbers) {
+    cleaned <- gsub("[\\(]*\\d+[\\)]*", "", cleaned)
+    cleaned <- gsub("(^| |\\()m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})($| |\\))", "", cleaned)
+  }
   # Build initial data
   if (is.null(id)) {
     id <- 1:length(text)

@@ -3,7 +3,6 @@
 #'         from the CongressApiResearch/DownloadResults project
 #' Outputs: dfInformation, dfContent, dfBills (saved to results/ folder),
 #'          stop_list.txt (saved to results/ folder),
-#'          dfTokens, dtmWords (saved to results/ folder)
 
 source("config.R")
 source("functions.R")
@@ -42,11 +41,6 @@ listTopWords <- BuildCommonRareTerms(dfTokenWords, nCommon=0.01, nRare=0)
 stoplistWords <- BuildStopList(vectors=listTopWords$common, manual=INPUT_STOPLIST, auto=TRUE)
 rm(dfTokenWords, listTopWords)
 
-#### BUILD TOKENS ####
-
-dfTokens <- BuildTokensCleaned(dfContent$summary, id=dfContent$bill_id, ngram=1, stoplist=stoplistWords)
-dtmWords <- cast_dtm(dfTokens, id, term, n)
-
 #### OUTPUT ####
 
 if (!dir.exists(OUTPUT_ROOT)) {
@@ -58,7 +52,3 @@ save(dfContent, file=file.path(OUTPUT_ROOT, "dfContent.RData"))
 save(dfBills, file=file.path(OUTPUT_ROOT, "dfBills.RData"))
 
 write(stoplistWords, file.path(OUTPUT_ROOT, "stop_list.txt"))
-
-save(dfTokens, file=file.path(OUTPUT_ROOT, "dfTokens.RData"))
-save(dtmWords, file=file.path(OUTPUT_ROOT, "dtmWords.RData"))
-
