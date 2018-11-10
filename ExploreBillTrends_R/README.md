@@ -1,8 +1,8 @@
 # Congress API Research - Explore Bill Trends (R version)
 
-Explore trends in bills based on data downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), parses and mines text and data, and generates results and visuals based on identified trends.
+Explore trends in bills based on data downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), performs LDA topic modeling, and outputs a text summary of topics.
 
-**Currently this is in development and the exploration stage, so the methodology and outputs are subject to change.**
+**This project is in development and outputs may be expanded.**
 
 ### References
 * [ProPublica Congress API](https://projects.propublica.org/api-docs/congress-api/)
@@ -11,8 +11,9 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 # Contents
 
 ### Scripts
-* `01_BuildTermsDocs.R` imports data, creates stop list, and builds terms/docs data.
-* {}
+* `01_ImportData.R` imports data and creates stop list.
+* `02_ModelTopics.R` builds terms/docs, trains LDA model, and applies topics.
+* `03_DescribeTopics.R` describes topics modeled based on terms and representative documents.
 * `config.R` defines parameters for files and operation
 * `functions.R` contains all user-defined functions
 
@@ -25,7 +26,14 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 * `../*/results.txt` (not part of repository) tab-delimited text files with data obtained from the Congress API for bills, based on output of the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults). Any number of text files can be read in.
 
 ### Outputs
-* {}
+* From Step 01, output to `results`:
+  * `dfInformation.RData, dfContent.RData, dfBills.RData` imported metadata, summary contents, and full text, from bills read in from separate project separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults).
+  * `stop_list.txt` stop list with manual, automatic, and rare terms.
+* From Step 02, output to `results`:
+  * `docTokens.RData, docTermMatrix.RData` tokens and document-term matrix used in topic modeling.
+  * `ldaTrain.RData, ldaBetas.RData, ldaGammas.RData, ldaTopics.RData` results of LDA topic modeling.
+* From Step 03, output to `results`:
+  * `topics_summary_*.txt` description of topics modeled (name defined in config.py)
 
 # Operation
 
@@ -35,4 +43,18 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 3. Run the related project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults) for one or more specific queries, and note where the `results.txt` and individual bill text file(s) are saved.
 
 ### Run Project
-1. {}
+1. Define parameters in `config.py`:
+  * `INPUT_ROOT` = path for input results.txt files and bill (often `../DownloadResults/data/*`)
+  * `INPUT_STLOPLIST` = path for optional manual stop list to add to automatic one
+  * `OUTPUT_ROOT` = path for output results
+  * `OUTPUT_TOPIC_FILESTEM` = name of output topic description file (omit file extension)
+  * `OUTPUT_TOPIC_SUBTITLE` = subtitle to use in output topic description file (optional)
+  * `RANDOM_SEED` = random seed to use for LDA model training
+  * `NUMBER_TOPICS` = number of topics to model in LDA training
+2. Run steps in order (step 01 can be skipped if files are already imported):
+  ```
+  source("01_ImportData.R")
+  source("02_ModelTopics.R")
+  source("03_DescribeTopics.R")
+  ```
+3. Review outputs in `results/*` folder.
