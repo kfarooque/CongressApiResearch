@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph")
+reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph", "lubridate")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
@@ -537,9 +537,9 @@ ExtractTopicsTopDocuments <- function(x, gammas=NULL, idcol="id", textcol="text"
   #' Args:
   #'   x: results data frame from joining topics and original document data, with columns:
   #'      idcol, textcol, "topic", and "probability"
+  #'   gammas: optional gammas data frame with "topic", "document", and "gamma" columns.
   #'   idcol: name of identifier column in x
   #'   textcol: name of text column to return as results in x
-  #'   gammas: optional gammas data frame with "topic", "document", and "gamma" columns.
   #'   n: number of illustrative documents per topic
   #' Returns:
   #'   Data frame with all fields for just the most illustrative documents per topic.
@@ -560,5 +560,62 @@ ExtractTopicsTopDocuments <- function(x, gammas=NULL, idcol="id", textcol="text"
   retVal <- left_join(docsContent[, "id"], x, by=c("id"=idcol))
   names(retVal)[names(retVal) == "id"] <- idcol
   retVal
+}
+
+
+#### TABLES AND GRAPHS ####
+
+
+DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocumentsTop=NULL, title=NULL) {
+  #' Describe topics using key terms and examples.
+  #' Args:
+  #'   x: dataframe with all documents, must have columns: "topic"
+  #'   xTermsTop: dataframe with top terms per topic, must have columns: "topic", "term" (optional)
+  #'   xTermsDistinct: dataframe with distinct terms per topic, must have columns: "topic", "term" (optional)
+  #'   xDocumentsTop: dataframe with top documents per topic, must have columns: "topic", and an ID and description field (optional)
+  #'   title: string with title for results (optional)
+  #' Returns:
+  #'   vector of lines with topic descriptions
+  # Headers and separators
+  topics <- unique(x$topic)[order(unique(x$topic))]
+  if (is.null(title)) {
+    title <- "Topic Descriptions"
+  }
+  header <- paste0(title, " (", length(topics), " topics)")
+  sepTopic <- "================================"
+  sepLine <- ""
+  exampleCharLimit <- 256
+  # Build lines
+  lines <- c(header, sepLine, sepTopic)
+  for (t in topics) {
+    lineHeader <- paste0("Topic #", t)
+    lineDocs <- paste0("Documents: ", sum(x$topic == t))
+    if (!is.null(xTermsTop)) {
+      lineTermsTop <- paste0("Top Terms: ", unlist(xTermsTop[xTermsTop$topic == t, "term"]))
+    } else {
+      lineTermsTop <- ""
+    }
+    if (!is.null(xTermsDistinct)) {
+      lineTermsDistinct <- paste0("Distinct Terms: ", unlist(xTermsDistinct[xTermsDistinct$topic == t, "term"]))
+    } else {
+      lineTermsDistinct <- ""
+    }
+    if (!is.null(xDocumentsTop)) {
+      examplesHeader <- paste0("Topic #", t, " - Representative Documents: ")
+      examplesList <- select(xDocumentsTop[xDocumentsTop$topic == t,], -topic)
+      names(examplesList) <- c("id", "description")
+      examplesList <- examplesList[, c("id", "description")] %>%
+        mutate(id = substr(id, 1, exampleCharLimit),
+               description = substr(description, 1, exampleCharLimit)) %>%
+        unite(documents, id, description, sep="\n\t")
+      examplesList <- paste0(unlist(examplesList), collapse="\n")
+    } else {
+      examplesList <- ""
+    }
+    newlines <- c(lineHeader, sepLine, lineDocs, lineTermsTop, lineTermsDistinct, 
+                  examplesHeader, examplesList, sepLine, sepTopic)
+    lines <- c(lines, newlines)
+  }
+   lines
 }
 

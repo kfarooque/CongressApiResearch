@@ -9,7 +9,7 @@ INPUT_STOPLIST <- file.path("resources", "stop_list_manual.txt")
 
 OUTPUT_ROOT <- file.path("results", "bills_search")
 OUTPUT_TOPIC_FILESTEM <- "topics_summary"
-OUTPUT_TOPIC_SUBTITLE <- "Using Summary Field"
+OUTPUT_TOPIC_TITLE <- "Topic Model Using Summary Field"
 
 #### PARAMETERS ####
 
