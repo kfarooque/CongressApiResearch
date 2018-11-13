@@ -34,6 +34,7 @@ dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")
                               "sponsor", "cosponsors_dem", "cosponsors_rep", "cosponsors_ind")],
             by="bill_id") %>%
   left_join(ldaTopics[, c("id", "topic", "probability")], by=c("bill_id"="id")) %>%
+  filter(latest_major_action_date > "2000-01-01") %>%
   mutate(description = ifelse(!is.na(summary), summary, title),
          description = ifelse(!is.na(primary_subject), paste0("(", primary_subject, ") ", description), description),
          passed = max(house_passage, senate_passage),
@@ -69,129 +70,74 @@ documentsTopicTop <- ExtractTopicsTopDocuments(dfDescription, ldaGammas, idcol="
 
 textTopicSummary <- DescribeTopicExamples(
   dfDescription, xTermsTop=termsTopicTop, xTermsDistinct=termsTopicDistinct, xDocumentsTop=documentsTopicTop, 
-  title=OUTPUT_TOPIC_TITLE
+  title="Topic Model Using Summary Field"
 )
 
 #### PLOT TOPIC GRAPHS ####
 
+plotTopics <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic"
+)
 
-PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, timeFreq="", labelGroup=NULL, labelCategory=NULL, labelTime=NULL) {
-  #' Plot graphs of topics optionally by a category and/or time parameter.
-  #' Args:
-  #'   seriesGroup: vector with group values (usually topic)
-  #'   seriesCategory: (optional) vector with category values (e.g., party, passage flag)
-  #'   seriesTime: (optional) vector with time values (e.g., date introduced)
-  #'   timeFreq: (optional) frequency by which to summarize seriesTime values
-  #'             valid values: "" (none), "W" (weekly), "M" (monthly), "Y" (yearly)
-  #'   labelGroup: (optional) label to use for group values
-  #'   labelCategory: (optional) label to use for category values
-  #'   labelTime: (optional) label to use for time values
-  #' Returns:
-  #'   Plot object of bar chart(s) or line graph(s) depending on use of group/category/time parameters.
-  # Define labels
-  if (is.null(labelGroup)) {
-    labelGroup <- "Group"
-  }
-  if (is.null(labelCategory)) {
-    labelCategory <- "Category"
-  }
-  if (is.null(labelTime)) {
-    labelTime <- "Time"
-  }
-  paletteBars <- c("orchid", "skyblue", "orangered", "springgreen")
-  paletteLines <- c('#A6CEE3','#1F78B4','#B2DF8A','#33A02C','#FB9A99','#E31A1C','#FDBF6F','#FF7F00','#CAB2D6','#6A3D9A','#FFFF99','#B15928')
-  # Define data
-  if (!is.null(seriesGroup)) {
-    df <- data.frame(stringsAsFactors=FALSE, group=as.character(seriesGroup))
-  } else {
-    df <- data.frame(stringsAsFactors=FALSE, group=rep("1", max(length(seriesCategory), length(seriesTime))))
-  }
-  if (!is.null(seriesCategory)) {
-    df["category"] <- seriesCategory
-  } else {
-    df["category"] <- "1"
-  }
-  if (!is.null(seriesTime)) {
-    if (tolower(timeFreq) == "y") {
-      df["time"] <- floor_date(seriesTime, unit="year")
-    } else if (tolower(timeFreq) == "m") {
-      df["time"] <- floor_date(seriesTime, unit="month")
-    } else if (tolower(timeFreq) == "w") {
-      df["time"] <- floor_date(seriesTime, unit="week")
-    } else {
-      df["time"] <- seriesTime
-    }
-  } else {
-    df["time"] <- 1
-  }
-  dfg <- summarize(group_by(df, group, category, time), value = n())
-  grpRange <- unique(dfg$group)[order(unique(dfg$group))]
-  grpPalette <- c(paletteLines, rainbow(length(grpRange) - length(paletteLines)))
-  catValues <- unique(dfg$category)
-  catPalette <- c(paletteBars, rainbow(length(catValues) - length(paletteBars)))
-  # Histogram
-  if (is.null(seriesCategory) & is.null(seriesTime)) {
-    plot <- ggplot(dfg, aes(x=group, y=value)) +
-      geom_bar(stat="identity", width=0.75, color="blue", fill="lightblue") +
-      scale_x_continuous(breaks=grpRange, labels=grpRange) +
-      labs(title=paste0(labelGroup, " Counts"), x=labelGroup, y="Count") +
-      theme_minimal()
-  }
-  # Histogram by category
-  if (!is.null(seriesCategory) & is.null(seriesTime)) {
-    plot <- ggplot(dfg, aes(x=group, y=value, fill=category)) +
-      geom_bar(stat="identity", width=0.75, color="black", position=position_dodge()) +
-      scale_x_continuous(breaks=grpRange, labels=grpRange) +
-      scale_fill_manual(values=catPalette) +
-      labs(title=paste0(labelGroup, " Counts by ", labelCategory), x=labelGroup, y="Count", fill=labelCategory) +
-      theme_minimal() + theme(legend.position="bottom")
-  }
-  # Line graphs
-  if (is.null(seriesCategory) & !is.null(seriesTime)) {
-    plot <- ggplot(dfg, aes(x=time, y=value, group=group, color=group)) +
-      geom_line() + geom_point() +
-      scale_color_manual(values=grpPalette) +
-      labs(title=paste0(labelGroup, " Counts by ", labelTime), x=labelTime, y="Count", group=labelGroup) +
-      theme_minimal() + theme(legend.position="bottom")
-  }
-  # Line graphs grid
-  if (!is.null(seriesCategory) & !is.null(seriesTime)) {
-    plots <- list()
-    for (g in grpRange) {
-      dfgTemp <- dfg[dfg$group == g, ]
-      plots[[g]] <- ggplot(dfgTemp, aes(x=time, y=value, group=category, color=category)) +
-        geom_line() + geom_point() +
-        scale_color_manual(values=grpPalette) +
-        labs(title=paste0(labelGroup, " ", g), x=labelTime, y="Count", group=labelCategory) +
-        theme_minimal() + theme(legend.position="bottom")
-    }
-    #TODO: http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
-    #      use multiplot() function from here
-    #      then call: plot <- multiplot(plotlist=plots, cols=3)
-  }
-  plot
-}
+plotTopicsEnacted <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$flag_enacted, labelCategory="Enacted into Law"
+)
+plotTopicsPassed <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$flag_passed, labelCategory="Passed in Congress"
+)
+plotTopicsSponsor <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$sponsor_party, labelCategory="Sponsor Party"
+)
+plotTopicsCosponsor <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$cosponsor_party, labelCategory="Cosponsor Party Lean"
+)
 
-seriesGroup = dfDescription$topic
-seriesCategory = dfDescription$cosponsor_party
-seriesTime = dfDescription$introduced_date
-labelGroup = "Topic"
-labelCategory = "Cosponsor Party"
-labelTime = "Introduced Date"
-timeFreq = "Y"
+plotTopicsByIntroduction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
+)
+plotTopicsByAction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
+)
 
+plotsTopicsEnactedByAction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$flag_enacted, labelCategory="Enacted into Law",
+  seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
+)
+plotsTopicsPassedByAction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$flag_passed, labelCategory="Passed in Congress",
+  seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
+)
+plotsTopicsSponsorByIntroduction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$sponsor_party, labelCategory="Sponsor Party",
+  seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
+)
+plotsTopicsCosponsorByIntroduction <- PlotTopicGraphs(
+  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesCategory=dfDescription$cosponsor_party, labelCategory="Cosponsor Party Lean",
+  seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
+)
 
-# plot <- ggplot(x, aes(date, level)) +
-#   geom_line() +
-#   facet_wrap(~ group, scales="free_y") +
-#   labs(x = "Date", y = "Weighted Level") +
-#   scale_x_date(date_labels="%Y-%m") +
-#   theme(text = element_text(size=20))
-# plot
+#### OUTPUT ####
 
+write(lines, file.path(OUTPUT_ROOT, "topics.txt"))
 
-#### OUTPUT SUMMARY ####
-
-
-
-write(lines, file.path(OUTPUT_ROOT, paste0(OUTPUT_TOPIC_FILESTEM, "_", NUMBER_TOPICS, ".txt")))
+#TODO: function to print either one plot or list of plots to a file - use PrintMultiplePlots()
+#      then call and output to OUTPUT_ROOT/topics...png (name is same as object minus 'plot' part)
+# plotTopics
+# plotTopicsEnacted
+# plotTopicsPassed
+# plotTopicsSponsor
+# plotTopicsCosponsor
+# plotsTopicsEnactedByAction
+# plotsTopicsPassedByAction
+# plotsTopicsSponsorByIntroduction
+# plotsTopicsCosponsorByIntroduction

@@ -1,5 +1,5 @@
 #' Model topics of bills.
-#' Inputs: dfInformation, dfContent, dfBills, stop_list.txt
+#' Inputs: dfInformation, dfContent, dfBills, stoplist.txt
 #' Outputs: docTokens, docTermMatrix (saved to results/ folder)
 #'          ldaTrain, ldaBetas, ldaGammas, ldaTopics (saved to results/ folder)
 
@@ -18,7 +18,7 @@ if (!exists("dfBills")) {
   load(file.path(OUTPUT_ROOT, "dfBills.RData"))
 }
 if (!exists("stoplistWords")) {
-  stoplistWords <- read.table(file.path(OUTPUT_ROOT, "stop_list.txt"), header=FALSE, sep="", stringsAsFactors=FALSE)
+  stoplistWords <- read.table(file.path(OUTPUT_ROOT, "stoplist.txt"), header=FALSE, sep="", stringsAsFactors=FALSE)
   stoplistWords <- unlist(stoplistWords)
 }
 

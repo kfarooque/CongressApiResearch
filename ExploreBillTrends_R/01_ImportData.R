@@ -2,7 +2,7 @@
 #' Inputs: results.txt, bills/_index_.txt, and bills/*.txt file(s) 
 #'         from the CongressApiResearch/DownloadResults project
 #' Outputs: dfInformation, dfContent, dfBills (saved to results/ folder),
-#'          stop_list.txt (saved to results/ folder),
+#'          stoplist.txt (saved to results/ folder),
 
 source("config.R")
 source("functions.R")
@@ -51,4 +51,4 @@ save(dfInformation, file=file.path(OUTPUT_ROOT, "dfInformation.RData"))
 save(dfContent, file=file.path(OUTPUT_ROOT, "dfContent.RData"))
 save(dfBills, file=file.path(OUTPUT_ROOT, "dfBills.RData"))
 
-write(stoplistWords, file.path(OUTPUT_ROOT, "stop_list.txt"))
+write(stoplistWords, file.path(OUTPUT_ROOT, "stoplist.txt"))

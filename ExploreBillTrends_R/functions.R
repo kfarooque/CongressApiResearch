@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph", "lubridate")
+reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph", "lubridate", "grid")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
@@ -617,5 +617,122 @@ DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocum
     lines <- c(lines, newlines)
   }
    lines
+}
+
+
+PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, timeFreq="", 
+                            labelGroup="Group", labelCategory="Category", labelTime="Time") {
+  #' Plot graphs of topics optionally by a category and/or time parameter.
+  #' Args:
+  #'   seriesGroup: vector with group values (usually topic)
+  #'   seriesCategory: (optional) vector with category values (e.g., party, passage flag)
+  #'   seriesTime: (optional) vector with time values (e.g., date introduced)
+  #'   timeFreq: (optional) frequency by which to summarize seriesTime values
+  #'             valid values: "" (none), "W" (weekly), "M" (monthly), "Y" (yearly)
+  #'   labelGroup: (optional) label to use for group values
+  #'   labelCategory: (optional) label to use for category values
+  #'   labelTime: (optional) label to use for time values
+  #' Returns:
+  #'   Plot object of bar chart(s) or line graph(s) depending on use of group/category/time parameters,
+  #'   or list of plot objects if multiple plots are generated.
+  # Define colors
+  paletteBars <- c("orchid", "skyblue", "orangered", "springgreen")
+  paletteLines <- c('#A6CEE3','#1F78B4','#B2DF8A','#33A02C','#FB9A99','#E31A1C','#FDBF6F','#FF7F00','#CAB2D6','#6A3D9A','#FFFF99','#B15928')
+  # Define data
+  if (!is.null(seriesGroup)) {
+    df <- data.frame(stringsAsFactors=FALSE, group=as.character(seriesGroup))
+  } else {
+    df <- data.frame(stringsAsFactors=FALSE, group=rep("1", max(length(seriesCategory), length(seriesTime))))
+  }
+  if (!is.null(seriesCategory)) {
+    df["category"] <- as.character(seriesCategory)
+  } else {
+    df["category"] <- "1"
+  }
+  if (!is.null(seriesTime)) {
+    if (tolower(timeFreq) == "y") {
+      df["time"] <- floor_date(seriesTime, unit="year")
+    } else if (tolower(timeFreq) == "m") {
+      df["time"] <- floor_date(seriesTime, unit="month")
+    } else if (tolower(timeFreq) == "w") {
+      df["time"] <- floor_date(seriesTime, unit="week")
+    } else {
+      df["time"] <- seriesTime
+    }
+  } else {
+    df["time"] <- 1
+  }
+  dfg <- summarize(group_by(df, group, category, time), value = n())
+  grpRange <- unique(dfg$group)[order(unique(dfg$group))]
+  grpPalette <- c(paletteLines, rainbow(length(grpRange) - length(paletteLines)))
+  catValues <- unique(dfg$category)
+  catPalette <- c(paletteBars, rainbow(length(catValues) - length(paletteBars)))
+  # Histogram
+  if (is.null(seriesCategory) & is.null(seriesTime)) {
+    plot <- ggplot(dfg, aes(x=group, y=value)) +
+      geom_bar(stat="identity", width=0.75, color="blue", fill="lightblue") +
+      scale_x_discrete(breaks=grpRange, labels=grpRange) +
+      labs(title=paste0(labelGroup, " Counts"), x=labelGroup, y="Count") +
+      theme_minimal()
+  }
+  # Histogram by category
+  if (!is.null(seriesCategory) & is.null(seriesTime)) {
+    plot <- ggplot(dfg, aes(x=group, y=value, fill=category)) +
+      geom_bar(stat="identity", width=0.75, color="black", position=position_dodge()) +
+      scale_x_discrete(breaks=grpRange, labels=grpRange) +
+      scale_fill_manual(values=catPalette) +
+      labs(title=paste0(labelGroup, " Counts by ", labelCategory), x=labelGroup, y="Count", fill=labelCategory) +
+      theme_minimal() + theme(legend.position="bottom")
+  }
+  # Line graphs
+  if (is.null(seriesCategory) & !is.null(seriesTime)) {
+    plot <- ggplot(dfg, aes(x=time, y=value, group=group, color=group)) +
+      geom_line() + geom_point() +
+      scale_color_manual(values=grpPalette) +
+      labs(title=paste0(labelGroup, " Counts by ", labelTime), x=labelTime, y="Count", group=labelGroup) +
+      theme_minimal() + theme(legend.position="bottom")
+  }
+  # Line graphs grid
+  if (!is.null(seriesCategory) & !is.null(seriesTime)) {
+    plot <- list()
+    for (g in grpRange) {
+      dfgTemp <- dfg[dfg$group == g, ]
+      plot[[g]] <- ggplot(dfgTemp, aes(x=time, y=value, group=category, color=category)) +
+        geom_line() + geom_point() +
+        scale_color_manual(values=grpPalette) +
+        labs(title=paste0(labelGroup, " ", g), x=labelTime, y="Count", group=labelCategory) +
+        theme_minimal() + theme(legend.position="bottom")
+    }
+  }
+  plot
+}
+
+
+PrintMultiplePlots <- function(plots, cols=2, layout=NULL) {
+  #' Plot multiple objects in columns.
+  #' Code adapted from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+  #' Args:
+  #'   plots: list of plot objects
+  #'   cols: number of columns in which to arrange plots (default 2)
+  #'   layout: matrix specifying the layout (optional)
+  #' Returns:
+  #'   NULL (prints results to console)
+  numPlots <- length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+  NULL
 }
 

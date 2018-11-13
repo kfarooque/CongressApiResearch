@@ -28,12 +28,13 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 ### Outputs
 * From Step 01, output to `results`:
   * `dfInformation.RData, dfContent.RData, dfBills.RData` imported metadata, summary contents, and full text, from bills read in from separate project separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults).
-  * `stop_list.txt` stop list with manual, automatic, and rare terms.
+  * `stoplist.txt` stop list with manual, automatic, and rare terms.
 * From Step 02, output to `results`:
   * `docTokens.RData, docTermMatrix.RData` tokens and document-term matrix used in topic modeling.
   * `ldaTrain.RData, ldaBetas.RData, ldaGammas.RData, ldaTopics.RData` results of LDA topic modeling.
 * From Step 03, output to `results`:
-  * `topics_summary_*.txt` description of topics modeled (name defined in config.py)
+  * `topics.txt` description of topics modeled.
+  * `topics*.png` graphs describing topics modeled by various characteristics.
 
 # Operation
 
