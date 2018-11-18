@@ -40,7 +40,7 @@ dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")
          passed = max(house_passage, senate_passage),
          flag_enacted = (!is.na(enacted)),
          flag_passed = (!is.na(house_passage) | !is.na(senate_passage)),
-         sponsor_party = gsub("^.*\\((.)-.*\\)$", "\\1", sponsor),
+         sponsor_party = gsub("^.*\\((.).*-.*\\)$", "\\1", sponsor),
          sponsor_party_num = ifelse(sponsor_party == "D", -1, 
                                     ifelse(sponsor_party == "R", 1, 0)),
          cosponsors_dem = cosponsors_dem + (sponsor_party == "D"),
@@ -128,16 +128,38 @@ plotsTopicsCosponsorByIntroduction <- PlotTopicGraphs(
 
 #### OUTPUT ####
 
-write(lines, file.path(OUTPUT_ROOT, "topics.txt"))
+output_dashboard <- file.path(OUTPUT_ROOT, "dashboard")
+if (!dir.exists(output_dashboard)) {
+  dir.create(output_dashboard, recursive=TRUE)
+}
 
-#TODO: function to print either one plot or list of plots to a file - use PrintMultiplePlots()
-#      then call and output to OUTPUT_ROOT/topics...png (name is same as object minus 'plot' part)
-# plotTopics
-# plotTopicsEnacted
-# plotTopicsPassed
-# plotTopicsSponsor
-# plotTopicsCosponsor
-# plotsTopicsEnactedByAction
-# plotsTopicsPassedByAction
-# plotsTopicsSponsorByIntroduction
-# plotsTopicsCosponsorByIntroduction
+write(textTopicSummary, file.path(output_dashboard, "summary.html"))
+SavePlotToFile(plotTopics, file.path(output_dashboard, "topics.png"))
+SavePlotToFile(plotTopicsEnacted, file.path(output_dashboard, "topics_Enacted.png"))
+SavePlotToFile(plotTopicsPassed, file.path(output_dashboard, "topics_Passed.png"))
+SavePlotToFile(plotTopicsSponsor, file.path(output_dashboard, "topics_Sponsor.png"))
+SavePlotToFile(plotTopicsCosponsor, file.path(output_dashboard, "topics_Cosponsor.png"))
+SavePlotToFile(plotsTopicsEnactedByAction, file.path(output_dashboard, "topics_EnactedByAction.png"))
+SavePlotToFile(plotsTopicsPassedByAction, file.path(output_dashboard, "topics_PassedByAction.png"))
+SavePlotToFile(plotsTopicsSponsorByIntroduction, file.path(output_dashboard, "topics_SponsorByIntroduction.png"))
+SavePlotToFile(plotsTopicsCosponsorByIntroduction, file.path(output_dashboard, "topics_CosponsorByIntroduction.png"))
+
+
+outpath = output_dashboard
+outfile = "dashboard.html"
+fileDescription = "summary.html"
+fileSingle = c("topics.png", "topics_Enacted.png", "topics_Passed.png", "topics_Sponsor.png", "topics_Cosponsor.png")
+fileMultiple = c("topics_EnactedByAction.png", "topics_PassedByAction.png", "topics_SponsorByIntroduction.png", "topics_CosponsorByIntroduction.png")
+
+fileStart <- c("<html>", "<head>Topic Descriptions Dashboard</head>", "<body>")
+fileEnd <- c("</body>", "</html>")
+sepSection <- "<hr />"
+lines <- c(fileStart)
+# description section
+''
+# single images
+''
+# image groups
+''
+# complete file
+lines <- c(lines, sepSection, fileEnd)

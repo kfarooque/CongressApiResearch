@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph", "lubridate", "grid")
+reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "topicmodels", "corpus", "SnowballC", "ggplot2", "ggraph", "igraph", "lubridate")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
@@ -577,43 +577,40 @@ DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocum
   #' Returns:
   #'   vector of lines with topic descriptions
   # Headers and separators
+  exampleCharLimit <- 256
   topics <- unique(x$topic)[order(unique(x$topic))]
   if (is.null(title)) {
     title <- "Topic Descriptions"
   }
-  header <- paste0(title, " (", length(topics), " topics)")
-  sepTopic <- "================================"
-  sepLine <- ""
-  exampleCharLimit <- 256
+  header <- paste0("<h1>", title, " (", length(topics), " topics)", "</h1>")
+  topicStart <- "<table border=0><tr><td>"
+  topicEnd <- "</td></tr></table>"
   # Build lines
-  lines <- c(header, sepLine, sepTopic)
+  lines <- c(header, "<p></p>")
   for (t in topics) {
-    lineHeader <- paste0("Topic #", t)
-    lineDocs <- paste0("Documents: ", sum(x$topic == t))
+    lineHeader <- paste0("<b>Topic #", t, "</b>", "<br />")
+    lineDocs <- paste0("<b>Documents:</b> ", sum(x$topic == t), "<br />")
     if (!is.null(xTermsTop)) {
-      lineTermsTop <- paste0("Top Terms: ", unlist(xTermsTop[xTermsTop$topic == t, "term"]))
+      lineTermsTop <- paste0("<b>Top Terms:</b> ", unlist(xTermsTop[xTermsTop$topic == t, "term"]), "<br />")
     } else {
-      lineTermsTop <- ""
+      lineTermsTop <- NULL
     }
     if (!is.null(xTermsDistinct)) {
-      lineTermsDistinct <- paste0("Distinct Terms: ", unlist(xTermsDistinct[xTermsDistinct$topic == t, "term"]))
+      lineTermsDistinct <- paste0("<b>Distinct Terms:</b> ", unlist(xTermsDistinct[xTermsDistinct$topic == t, "term"]), "<br />")
     } else {
-      lineTermsDistinct <- ""
+      lineTermsDistinct <- NULL
     }
     if (!is.null(xDocumentsTop)) {
-      examplesHeader <- paste0("Topic #", t, " - Representative Documents: ")
+      examplesHeader <- paste0("<b>Representative Documents:</b>", "<br />")
       examplesList <- select(xDocumentsTop[xDocumentsTop$topic == t,], -topic)
       names(examplesList) <- c("id", "description")
       examplesList <- examplesList[, c("id", "description")] %>%
-        mutate(id = substr(id, 1, exampleCharLimit),
-               description = substr(description, 1, exampleCharLimit)) %>%
-        unite(documents, id, description, sep="\n\t")
-      examplesList <- paste0(unlist(examplesList), collapse="\n")
+        mutate(line = paste0("<li>", "<b>", id, ":</b> ", substr(description, 1, exampleCharLimit), "</li>"))
+      lineExamples <- c(examplesHeader, "<ul>", examplesList$line, "</ul><br />")
     } else {
-      examplesList <- ""
+      lineExamples <- NULL
     }
-    newlines <- c(lineHeader, sepLine, lineDocs, lineTermsTop, lineTermsDistinct, 
-                  examplesHeader, examplesList, sepLine, sepTopic)
+    newlines <- c(topicStart, lineHeader, lineDocs, lineTermsTop, lineTermsDistinct, lineExamples, topicEnd)
     lines <- c(lines, newlines)
   }
    lines
@@ -688,19 +685,20 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
   if (is.null(seriesCategory) & !is.null(seriesTime)) {
     plot <- ggplot(dfg, aes(x=time, y=value, group=group, color=group)) +
       geom_line() + geom_point() +
-      scale_color_manual(values=grpPalette) +
+      scale_color_manual(name=labelGroup, values=grpPalette) +
       labs(title=paste0(labelGroup, " Counts by ", labelTime), x=labelTime, y="Count", group=labelGroup) +
       theme_minimal() + theme(legend.position="bottom")
   }
-  # Line graphs grid
+  # Line graphs list
   if (!is.null(seriesCategory) & !is.null(seriesTime)) {
     plot <- list()
     for (g in grpRange) {
       dfgTemp <- dfg[dfg$group == g, ]
       plot[[g]] <- ggplot(dfgTemp, aes(x=time, y=value, group=category, color=category)) +
         geom_line() + geom_point() +
-        scale_color_manual(values=grpPalette) +
-        labs(title=paste0(labelGroup, " ", g), x=labelTime, y="Count", group=labelCategory) +
+        scale_color_manual(name=labelCategory, values=grpPalette) +
+        labs(title=paste0(labelGroup, " ", labelCategory, " by ", labelTime, " - ", labelGroup, " ", g), 
+             x=labelTime, y="Count", group=labelCategory) +
         theme_minimal() + theme(legend.position="bottom")
     }
   }
@@ -708,31 +706,32 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
 }
 
 
-PrintMultiplePlots <- function(plots, cols=2, layout=NULL) {
-  #' Plot multiple objects in columns.
-  #' Code adapted from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+SavePlotToFile <- function(plot, file, width=640, height=480, res=100) {
+  #' Save plot or list of plots to .png file(s).
   #' Args:
-  #'   plots: list of plot objects
-  #'   cols: number of columns in which to arrange plots (default 2)
-  #'   layout: matrix specifying the layout (optional)
+  #'   plot: plot object or list of plot objects to save to file(s)
+  #'   file: string, full path of output file (plot name is appended to end if saving a list)
+  #'   width: integer, width of output in pixels
+  #'   height: integer, height of output in pixels
+  #'   res: integer, resolution
   #' Returns:
-  #'   NULL (prints results to console)
-  numPlots <- length(plots)
-  if (is.null(layout)) {
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  if (numPlots==1) {
-    print(plots[[1]])
+  #'   NULL (saves output to file)
+  filestem <- gsub("\\.\\w{1,5}$", "", file)
+  if (class(plot)[1] != "list") {
+    filename <- paste0(filestem, ".png")
+    outfile <- png(filename, width=width, height=height, res=res)
+    capture.output(plot)
+    dev.off()
   } else {
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    for (i in 1:numPlots) {
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
+    plotnames <- names(plot)
+    for (p in plotnames) {
+      filename <- paste0(filestem, "_", p, ".png")
+      outfile <- png(filename, width=width, height=height, res=res)
+      capture.output(plot[p])
+      dev.off()
     }
   }
   NULL
 }
+
 
