@@ -134,6 +134,7 @@ if (!dir.exists(output_dashboard)) {
 }
 
 write(textTopicSummary, file.path(output_dashboard, "summary.html"))
+
 SavePlotToFile(plotTopics, file.path(output_dashboard, "topics.png"))
 SavePlotToFile(plotTopicsEnacted, file.path(output_dashboard, "topics_Enacted.png"))
 SavePlotToFile(plotTopicsPassed, file.path(output_dashboard, "topics_Passed.png"))
@@ -144,22 +145,10 @@ SavePlotToFile(plotsTopicsPassedByAction, file.path(output_dashboard, "topics_Pa
 SavePlotToFile(plotsTopicsSponsorByIntroduction, file.path(output_dashboard, "topics_SponsorByIntroduction.png"))
 SavePlotToFile(plotsTopicsCosponsorByIntroduction, file.path(output_dashboard, "topics_CosponsorByIntroduction.png"))
 
-
-outpath = output_dashboard
-outfile = "dashboard.html"
-fileDescription = "summary.html"
-fileSingle = c("topics.png", "topics_Enacted.png", "topics_Passed.png", "topics_Sponsor.png", "topics_Cosponsor.png")
-fileMultiple = c("topics_EnactedByAction.png", "topics_PassedByAction.png", "topics_SponsorByIntroduction.png", "topics_CosponsorByIntroduction.png")
-
-fileStart <- c("<html>", "<head>Topic Descriptions Dashboard</head>", "<body>")
-fileEnd <- c("</body>", "</html>")
-sepSection <- "<hr />"
-lines <- c(fileStart)
-# description section
-''
-# single images
-''
-# image groups
-''
-# complete file
-lines <- c(lines, sepSection, fileEnd)
+SaveCombinedDashboard(
+  output_dashboard, "dashboard.html",
+  fileDescription="summary.html",
+  fileSingle=c("topics.png", "topics_Enacted.png", "topics_Passed.png", "topics_Sponsor.png", "topics_Cosponsor.png"),
+  filestemMultiple=c("topics_EnactedByAction.png", "topics_PassedByAction.png", "topics_SponsorByIntroduction.png", "topics_CosponsorByIntroduction.png"),
+  tableColumns=2
+)

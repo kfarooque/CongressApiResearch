@@ -735,3 +735,59 @@ SavePlotToFile <- function(plot, file, width=640, height=480, res=100) {
 }
 
 
+SaveCombinedDashboard <- function(outpath, outfile, fileDescription, fileSingle, filestemMultiple, tableColumns=3) {
+  #' Save combined output from summary file, single images, and multiple images, as single dashboard file.
+  #' Args:
+  #'   outpath: string, path where all outputs are stored and where dashboard will be saved
+  #'   outfile: string, name of output file
+  #'   fileDescription: string, name of file with summary info (summary.html)
+  #'   fileSingle: vector of strings, list of all individual image files (in outpath) to put in dashboard
+  #'   filestemMultiple: vector of strings, list of initial part of files (in outpath) to put in tables in dasboard
+  #'   tableColumns: integer, number of columns to use for images defined by filestemMultiple
+  #' Return:
+  #'   null; output dashboard html file is output to location given in outpath
+  validFiles <- list.files(outpath)
+  fileStart <- c("<html>", "<head>Topic Descriptions Dashboard</head>", "<body>")
+  fileEnd <- c("</body>", "</html>")
+  sepSection <- "<hr />"
+  # description section
+  linesDescription <- read_file(file.path(outpath, fileDescription))
+  linesDescription <- unlist(strsplit(linesDescription, "\n"))
+  linesDescription <- gsub("\r", "", linesDescription)
+  # single images
+  linesSingleImages <- c()
+  for (file in fileSingle) {
+    linesSingleImages <- c(linesSingleImages, paste0("<img src='", file, "'>", "<br />"))
+  }
+  # image groups
+  linesMultipleImages <- c()
+  for (filestem in filestemMultiple) {
+    filestem <- gsub("\\.\\w{1,5}$", "", filestem)
+    files <- validFiles[grep(filestem, validFiles)]
+    imgTable <- c("<table border=0>")
+    for (f in 1:(ceiling(length(files) / tableColumns) * tableColumns)) {
+      if ((f-1) %% tableColumns == 0) {
+        startRow <- "<tr>"
+      } else {
+        startRow <- ""
+      }
+      if ((f-1) %% tableColumns == (tableColumns-1)) {
+        endRow <- "</tr>"
+      } else {
+        endRow <- ""
+      }
+      if (f <= length(files)) {
+        cell <- paste0(startRow, "<td><img src='", files[f], "'>", "</td>", endRow)
+      } else {
+        cell <- paste0(startRow, "<td>&nbsp;</td>", endRow)
+      }
+      imgTable <- c(imgTable, cell)
+    }
+    imgTable <- c(imgTable, "</table><br /><hr />")
+    linesMultipleImages <- c(linesMultipleImages, imgTable)
+  }
+  # complete file
+  lines <- c(fileStart, sepSection, linesDescription, sepSection, linesSingleImages, sepSection, linesMultipleImages, fileEnd)
+  write(lines, file.path(outpath, outfile))
+  NULL
+}

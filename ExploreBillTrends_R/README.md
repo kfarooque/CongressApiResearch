@@ -1,6 +1,6 @@
 # Congress API Research - Explore Bill Trends (R version)
 
-Explore trends in bills based on data downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), performs LDA topic modeling, and outputs a text summary of topics.
+Explore trends in bills based on data downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), performs LDA topic modeling, and outputs a dashboard with a summary of topics.
 
 **This project is in development and outputs may be expanded.**
 
@@ -32,9 +32,10 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 * From Step 02, output to `results`:
   * `docTokens.RData, docTermMatrix.RData` tokens and document-term matrix used in topic modeling.
   * `ldaTrain.RData, ldaBetas.RData, ldaGammas.RData, ldaTopics.RData` results of LDA topic modeling.
-* From Step 03, output to `results`:
-  * `topics.txt` description of topics modeled.
-  * `topics*.png` graphs describing topics modeled by various characteristics.
+* From Step 03, output to `results/dashboard`:
+  * `dashboard.html` combined dashboard with topic descriptors and images.
+  * `summary.html` description of each topic based on key terms and representative docs.
+  * `*.png` various images that graph topics by other characteristics.
 
 # Operation
 
