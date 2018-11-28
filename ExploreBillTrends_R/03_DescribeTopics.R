@@ -14,14 +14,14 @@ if (!exists("dfInformation")) {
 if (!exists("dfContent")) {
   load(file.path(OUTPUT_ROOT, "dfContent.RData"))
 }
-if (!exists("dfBills")) {
-  load(file.path(OUTPUT_ROOT, "dfBills.RData"))
-}
+# if (!exists("dfBills")) {
+#   load(file.path(OUTPUT_ROOT, "dfBills.RData"))
+# }
 if (!exists("ldaBetas")) {
-  load(file.path(OUTPUT_ROOT, "ldaBetas.RData"))
+  load(file.path(TRAIN_ROOT, "ldaBetas.RData"))
 }
 if (!exists("ldaGammas")) {
-  load(file.path(OUTPUT_ROOT, "ldaGammas.RData"))
+  load(file.path(TRAIN_ROOT, "ldaGammas.RData"))
 }
 if (!exists("ldaTopics")) {
   load(file.path(OUTPUT_ROOT, "ldaTopics.RData"))

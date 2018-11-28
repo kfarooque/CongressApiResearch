@@ -53,14 +53,16 @@ ImportMultipleResults <- function(files, header=TRUE, sep="\t", quote="", addSou
   dfResults <- data.frame()
   for (f in 1:length(files)) {
     file <- files[f]
-    dfTemp <- read.table(file, header=header, sep=sep, quote=quote, na.strings="", comment.char="",
-                         fileEncoding="UTF-8", strip.white=TRUE, stringsAsFactors=FALSE)
-    if (addSource) {
-      parts <- unlist(strsplit(file, split="[\\/]"))
-      dfTemp['source_path'] = file
-      dfTemp['source_file'] = parts[length(parts)]
+    if (file.exists(file)) {
+      dfTemp <- read.table(file, header=header, sep=sep, quote=quote, na.strings="", comment.char="",
+                           fileEncoding="UTF-8", strip.white=TRUE, stringsAsFactors=FALSE)
+      if (addSource) {
+        parts <- unlist(strsplit(file, split="[\\/]"))
+        dfTemp['source_path'] = file
+        dfTemp['source_file'] = parts[length(parts)]
+      }
+      dfResults <- rbind(dfResults, dfTemp)
     }
-    dfResults <- rbind(dfResults, dfTemp)
   }
   dfResults
 }
