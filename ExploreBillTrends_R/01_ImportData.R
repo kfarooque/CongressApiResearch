@@ -1,8 +1,6 @@
-#' Import and format data, create stop list, and build terms/docs data.
-#' Inputs: results.txt, bills/_index_.txt, and bills/*.txt file(s) 
-#'         from the CongressApiResearch/DownloadResults project
-#' Outputs: dfInformation, dfContent, dfBills (saved to TRAIN or OUTPUT folder),
-#'          stoplist.txt (saved to TRAIN folder),
+#' Import and format data.
+#' Inputs: results.txt, bills/_index_.txt, and bills/*.txt file(s) from the CongressApiResearch/DownloadResults project
+#' Outputs: dfInformation, dfContent, dfBills (saved to TRAIN or OUTPUT folder)
 
 source("config.R")
 source("functions.R")
@@ -44,24 +42,15 @@ if (nrow(dfInformation) == nrow(dfBills)) {
   print("NOTE: Full bill text was not loaded for all bills.")
 }
 
-#### BUILD STOP LIST ####
+#### FILTER DATA ####
 
-if (TRAIN_MODEL) {
-  dfTokenWords <- BuildTokensTfidf(dfContent$summary, dfContent$bill_id, ngram=1)
-  listTopWords <- BuildCommonRareTerms(dfTokenWords, nCommon=0.01, nRare=0)
-  stoplistWords <- BuildStopList(vectors=listTopWords$common, manual=INPUT_STOPLIST, auto=TRUE)
-  rm(dfTokenWords, listTopWords)
-}
+#TODO: add parameters for filtering by votes/enacted (i.e., drop junk bills), then apply here
 
 #### OUTPUT ####
 
-if (!dir.exists(OUTPUT_ROOT)) {
-  dir.create(OUTPUT_ROOT, recursive=TRUE)
+if (!dir.exists(OUTPUT_FOLDER)) {
+  dir.create(OUTPUT_FOLDER, recursive=TRUE)
 }
-save(dfInformation, file=file.path(OUTPUT_ROOT, "dfInformation.RData"))
-save(dfContent, file=file.path(OUTPUT_ROOT, "dfContent.RData"))
-save(dfBills, file=file.path(OUTPUT_ROOT, "dfBills.RData"))
-
-if (TRAIN_MODEL) {
-  write(stoplistWords, file.path(OUTPUT_ROOT, "stoplist.txt"))
-}
+save(dfInformation, file=file.path(OUTPUT_FOLDER, "dfInformation.RData"))
+save(dfContent, file=file.path(OUTPUT_FOLDER, "dfContent.RData"))
+save(dfBills, file=file.path(OUTPUT_FOLDER, "dfBills.RData"))

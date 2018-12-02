@@ -2,21 +2,24 @@
 #' Inputs: n/a
 #' Outputs: n/a
 
-#### INPUTS/OUTPUTS ####
-
-INPUT_ROOT <- file.path("..", "DownloadResults", "data", "bills_introduced")
-INPUT_STOPLIST <- file.path("resources", "stop_list_manual.txt")
-
-TRAIN_ROOT <- file.path("model")
-
-OUTPUT_ROOT <- file.path("results", "bills_search")
-
 #### PARAMETERS ####
 
 TRAIN_MODEL <- TRUE
+NUMBER_TOPICS <- 8
 RANDOM_SEED <- 654
-NUMBER_TOPICS <- 10
+
+#### INPUTS/OUTPUTS ####
+
+STOPLIST_FOLDER <- file.path("resources")
+
+INPUT_ROOT <- file.path("..", "DownloadResults", "data", "bills_introduced")
+TRAIN_ROOT <- file.path("model")
+OUTPUT_ROOT <- file.path("results", "bills_search")
 
 if (TRAIN_MODEL) {
-  OUTPUT_ROOT <- TRAIN_ROOT
+  TRAIN_FOLDER <- file.path(TRAIN_ROOT, paste0("k", NUMBER_TOPICS))
+  OUTPUT_FOLDER <- TRAIN_FOLDER
+} else {
+  TRAIN_FOLDER <- file.path(TRAIN_ROOT, paste0("k", NUMBER_TOPICS))
+  OUTPUT_FOLDER <- OUTPUT_ROOT
 }

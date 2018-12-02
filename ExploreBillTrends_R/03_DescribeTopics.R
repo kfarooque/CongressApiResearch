@@ -1,7 +1,7 @@
 #' Model topics of bills.
 #' Inputs: dfInformation, dfContent, dfBills,
-#'         ldaBetas, ldaGammas, ldaTopics 
-#' Outputs: topics_summary_*.txt (saved to results/ folder)
+#'         ldaBetas, ldaGammas, ldaTopics
+#' Outputs: graphs/tables saved to results/ folder
 
 source("config.R")
 source("functions.R")
@@ -9,22 +9,22 @@ source("functions.R")
 #### LOAD DATA ####
 
 if (!exists("dfInformation")) {
-  load(file.path(OUTPUT_ROOT, "dfInformation.RData"))
+  load(file.path(OUTPUT_FOLDER, "dfInformation.RData"))
 }
 if (!exists("dfContent")) {
-  load(file.path(OUTPUT_ROOT, "dfContent.RData"))
+  load(file.path(OUTPUT_FOLDER, "dfContent.RData"))
 }
 # if (!exists("dfBills")) {
-#   load(file.path(OUTPUT_ROOT, "dfBills.RData"))
+#   load(file.path(OUTPUT_FOLDER, "dfBills.RData"))
 # }
 if (!exists("ldaBetas")) {
-  load(file.path(TRAIN_ROOT, "ldaBetas.RData"))
+  load(file.path(TRAIN_FOLDER, "ldaBetas.RData"))
 }
 if (!exists("ldaGammas")) {
-  load(file.path(TRAIN_ROOT, "ldaGammas.RData"))
+  load(file.path(TRAIN_FOLDER, "ldaGammas.RData"))
 }
 if (!exists("ldaTopics")) {
-  load(file.path(OUTPUT_ROOT, "ldaTopics.RData"))
+  load(file.path(OUTPUT_FOLDER, "ldaTopics.RData"))
 }
 
 #### BUILD BILL DESCRIPTORS ####
@@ -41,7 +41,7 @@ dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")
          flag_enacted = (!is.na(enacted)),
          flag_passed = (!is.na(house_passage) | !is.na(senate_passage)),
          sponsor_party = gsub("^.*\\((.).*-.*\\)$", "\\1", sponsor),
-         sponsor_party_num = ifelse(sponsor_party == "D", -1, 
+         sponsor_party_num = ifelse(sponsor_party == "D", -1,
                                     ifelse(sponsor_party == "R", 1, 0)),
          cosponsors_dem = cosponsors_dem + (sponsor_party == "D"),
          cosponsors_rep = cosponsors_rep + (sponsor_party == "R"),
@@ -52,7 +52,7 @@ dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")
                                          ifelse(cosponsors_rep/cosponsors_sum >= 0.7, "R",
                                                 "B"))),
          cosponsor_party_num = round((cosponsors_rep - cosponsors_dem) / cosponsors_sum, 2)) %>%
-  select(bill_id, description, introduced_date, latest_major_action_date, flag_enacted, flag_passed, 
+  select(bill_id, description, introduced_date, latest_major_action_date, flag_enacted, flag_passed,
          sponsor_party, sponsor_party_num, cosponsor_party, cosponsor_party_num,
          topic, probability)
 
@@ -69,7 +69,7 @@ documentsTopicTop <- ExtractTopicsTopDocuments(dfDescription, ldaGammas, idcol="
   select(topic, bill_id, description)
 
 textTopicSummary <- DescribeTopicExamples(
-  dfDescription, xTermsTop=termsTopicTop, xTermsDistinct=termsTopicDistinct, xDocumentsTop=documentsTopicTop, 
+  dfDescription, xTermsTop=termsTopicTop, xTermsDistinct=termsTopicDistinct, xDocumentsTop=documentsTopicTop,
   title="Topic Model Using Summary Field"
 )
 
@@ -128,7 +128,7 @@ plotsTopicsCosponsorByIntroduction <- PlotTopicGraphs(
 
 #### OUTPUT ####
 
-output_dashboard <- file.path(OUTPUT_ROOT, "dashboard")
+output_dashboard <- file.path(OUTPUT_FOLDER, "dashboard")
 if (!dir.exists(output_dashboard)) {
   dir.create(output_dashboard, recursive=TRUE)
 }

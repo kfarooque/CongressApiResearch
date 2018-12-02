@@ -331,7 +331,7 @@ BuildStopList <- function(vectors=NULL, manual=NULL, auto=TRUE) {
     stopwordsBuilt <- c()
   }
   if (!is.null(manual)) {
-    if (file.info(INPUT_STOPLIST)$size != 0) {
+    if (file.info(manual)$size != 0) {
       stopwordsImported <- read.table(manual, header=FALSE, stringsAsFactors=FALSE,
                                       sep="\n", quote="", na.strings="")
       stopwordsImported <- unlist(stopwordsImported)
@@ -400,6 +400,7 @@ BuildTokensCleaned <- function(text, id=NA, ngram=1, stoplist=NULL, stemWords=FA
   #'   dataframe with id, term (cleaned), n (count)
   # Clean terms
   cleaned <- iconv(text, to="UTF-8", sub="?")
+  cleaned[is.na(cleaned)] <- ""
   if (stemWords) {
     cleaned <- StemWordsHunspell(cleaned)
   }
@@ -552,6 +553,7 @@ ExtractTopicsTopDocuments <- function(x, gammas=NULL, idcol="id", textcol="text"
     docsGammas <- mutate(gammas, id = document) %>%
       select(id, topic, gamma)
     docsContent <- left_join(docsContent, docsGammas, by=c("id", "topic")) %>%
+      mutate(gamma = ifelse(is.na(gamma), 0, gamma)) %>%
       group_by(topic) %>%
       arrange(topic, desc(probability), desc(gamma))
   }

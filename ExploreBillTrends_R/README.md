@@ -4,6 +4,12 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 
 **This project is in development and outputs may be expanded.**
 
+```
+#TODO list#
+add user input to label the clusters in TRAIN folder
+test application of existing model to new documents
+```
+
 ### References
 * [ProPublica Congress API](https://projects.propublica.org/api-docs/congress-api/)
 * [Congress API - Download Results](https://github.com/kfarooque/CongressApiDownloadResults)
