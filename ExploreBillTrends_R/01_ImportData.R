@@ -44,7 +44,32 @@ if (nrow(dfInformation) == nrow(dfBills)) {
 
 #### FILTER DATA ####
 
-#TODO: add parameters for filtering by votes/enacted (i.e., drop junk bills), then apply here
+dfFilter <- cbind(dfInformation[, c("bill_id", "active")],
+                  data.frame(lapply(dfInformation[, c("last_vote", "house_passage", "senate_passage", "enacted")], function(x) {!is.na(x)})))
+if (FILTER_ENACTED) {
+  bills <- dfFilter[dfFilter$enacted, "bill_id"]
+} else if (FILTER_PASSED) {
+  bills <- dfFilter[(dfFilter$house_passage | dfFilter$senate_passage) | dfFilter$enacted, "bill_id"]
+} else if (FILTER_VOTED) {
+  bills <- dfFilter[dfFilter$last_vote | (dfFilter$house_passage | dfFilter$senate_passage) | dfFilter$enacted, "bill_id"]
+} else if (FILTER_ACTIVE) {
+  bills <- dfFilter[dfFilter$active | dfFilter$last_vote | (dfFilter$house_passage | dfFilter$senate_passage) | dfFilter$enacted, "bill_id"]
+} else {
+  bills <- dfFilter[, "bill_id"]
+}
+rm(dfFilter)
+
+if ("bill_id" %in% colnames(dfInformation) & length(bills) != nrow(dfInformation)) {
+  dfInformation <- dfInformation[dfInformation$bill_id %in% bills, ]
+}
+if ("bill_id" %in% colnames(dfContent) & length(bills) != nrow(dfContent)) {
+  dfContent <- dfContent[dfContent$bill_id %in% bills, ]
+}
+if ("bill_id" %in% colnames(dfBills) & length(bills) != nrow(dfBills)) {
+  dfBills <- dfBills[dfBills$bill_id %in% bills, ]
+}
+
+print(paste0("There were ", length(bills), " bills kept after filtering."))
 
 #### OUTPUT ####
 

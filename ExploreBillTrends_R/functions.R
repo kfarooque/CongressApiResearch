@@ -36,6 +36,46 @@ JoinValuesByGroup <- function(x, group, value, sep=";") {
 }
 
 
+CreateDummyLabelsFile <- function(topics, file) {
+  #' Create dummy labels text file with labels that can be overwritten by user.
+  #' Args:
+  #'   topics: integer, number of topics in use
+  #'   file: path and name of file to output
+  #' Returns:
+  #'   null, outputs file to path specified by file argument
+  lines <- data.frame(stringsAsFactors=FALSE, topic=0:topics)
+  lines[lines$topic == 0, "label"] <- "Not in any defined topic"
+  lines[lines$topic != 0, "label"] <- as.character(lines[lines$topic != 0, "topic"])
+  write.table(lines, file=file, quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
+  NULL
+}
+
+
+ImportTopicLabelsFile <- function(file, topics) {
+  #' Import topic labels text file as named vector for use in later labeling steps.
+  #' Args:
+  #'   file: string, path and filename of labels text file,
+  #'         must be tab-delimited text file, first column is cluster number (integer)
+  #'         and second column is cluster label (string)
+  #'   topics: integer or vector of integers, total number of clusters or vector of cluster numbers
+  #' Returns:
+  #'   named vector where names are cluster numbers (integers as string) and values are labels
+  clusters <- data.frame(stringsAsFactors=FALSE, topic = 0:max(topics))
+  labels <- read.table(file, sep="\t", header=FALSE, stringsAsFactors=FALSE)
+  names(labels) <- c("topic", "label")
+  df <- left_join(clusters, labels, by="topic")
+  if (is.null(df$label)) {
+    df$label <- as.character(NA)
+  }
+  df <- df %>%
+    mutate(label = ifelse(is.na(label), as.character(topic), label),
+           label = ifelse(topic == 0 & label == "0", "Not in any defined topic", label))
+  retVal <- as.character(df$label)
+  names(retVal) <- as.character(df$topic)
+  retVal
+}
+
+
 #### IMPORT DATA ####
 
 
@@ -570,7 +610,7 @@ ExtractTopicsTopDocuments <- function(x, gammas=NULL, idcol="id", textcol="text"
 #### TABLES AND GRAPHS ####
 
 
-DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocumentsTop=NULL, title=NULL) {
+DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocumentsTop=NULL, title=NULL, labels=NULL) {
   #' Describe topics using key terms and examples.
   #' Args:
   #'   x: dataframe with all documents, must have columns: "topic"
@@ -578,6 +618,7 @@ DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocum
   #'   xTermsDistinct: dataframe with distinct terms per topic, must have columns: "topic", "term" (optional)
   #'   xDocumentsTop: dataframe with top documents per topic, must have columns: "topic", and an ID and description field (optional)
   #'   title: string with title for results (optional)
+  #'   labels: named vector with label for each topic value (optional)
   #' Returns:
   #'   vector of lines with topic descriptions
   # Headers and separators
@@ -592,7 +633,17 @@ DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocum
   # Build lines
   lines <- c(header, "<p></p>")
   for (t in topics) {
-    lineHeader <- paste0("<b>Topic #", t, "</b>", "<br />")
+    if (!is.null(labels)) {
+      label <- labels[as.character(t)]
+      if (is.na(label)) {
+        label <- ""
+      } else {
+        label <- paste0("(", label, ")")
+      }
+    } else {
+      label <- ""
+    }
+    lineHeader <- paste0("<b>Topic #", t, "</b> ", label, "<br />")
     lineDocs <- paste0("<b>Documents:</b> ", sum(x$topic == t), "<br />")
     if (!is.null(xTermsTop)) {
       lineTermsTop <- paste0("<b>Top Terms:</b> ", unlist(xTermsTop[xTermsTop$topic == t, "term"]), "<br />")
@@ -621,13 +672,15 @@ DescribeTopicExamples <- function(x, xTermsTop=NULL, xTermsDistinct=NULL, xDocum
 }
 
 
-PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, timeFreq="", 
+PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, 
+                            groupLabels=NULL, timeFreq="", 
                             labelGroup="Group", labelCategory="Category", labelTime="Time") {
   #' Plot graphs of topics optionally by a category and/or time parameter.
   #' Args:
   #'   seriesGroup: vector with group values (usually topic)
   #'   seriesCategory: (optional) vector with category values (e.g., party, passage flag)
   #'   seriesTime: (optional) vector with time values (e.g., date introduced)
+  #'   groupLabels: (optional) named vector with label for each topic value
   #'   timeFreq: (optional) frequency by which to summarize seriesTime values
   #'             valid values: "" (none), "W" (weekly), "M" (monthly), "Y" (yearly)
   #'   labelGroup: (optional) label to use for group values
@@ -639,6 +692,34 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
   # Define colors
   paletteBars <- c("orchid", "skyblue", "orangered", "springgreen")
   paletteLines <- c('#A6CEE3','#1F78B4','#B2DF8A','#33A02C','#FB9A99','#E31A1C','#FDBF6F','#FF7F00','#CAB2D6','#6A3D9A','#FFFF99','#B15928')
+  if (!is.null(seriesCategory)) {
+    catValues <- unique(seriesCategory)
+    catValues <- catValues[order(catValues)]
+    if (length(catValues) <= length(paletteBars)) {
+      paletteBars[which(catValues == "B")] <- "purple"
+      paletteLines[which(catValues == "B")] <- "purple"
+      paletteBars[which(catValues == "I")] <- "gray"
+      paletteLines[which(catValues == "I")] <- "gray"
+      paletteBars[which(catValues == "D")] <- "blue"
+      paletteLines[which(catValues == "D")] <- "blue"
+      paletteBars[which(catValues == "R")] <- "red"
+      paletteLines[which(catValues == "R")] <- "red"
+      paletteBars[which(catValues == TRUE)] <- "green"
+      paletteLines[which(catValues == TRUE)] <- "green"
+      paletteBars[which(catValues == FALSE)] <- "orange"
+      paletteLines[which(catValues == FALSE)] <- "orange"
+    }
+  }
+  # Define captions
+  if (!is.null(groupLabels)) {
+    caption <- c()
+    for (i in 1:length(groupLabels)) {
+      caption <- c(caption, paste0(names(groupLabels)[i], ": ", groupLabels[i]))
+    }
+    names(caption) <- names(groupLabels)
+  } else {
+    caption <- ""
+  }
   # Define data
   if (!is.null(seriesGroup)) {
     df <- data.frame(stringsAsFactors=FALSE, group=as.character(seriesGroup))
@@ -674,6 +755,7 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
       geom_bar(stat="identity", width=0.75, color="blue", fill="lightblue") +
       scale_x_discrete(breaks=grpRange, labels=grpRange) +
       labs(title=paste0(labelGroup, " Counts"), x=labelGroup, y="Count") +
+      labs(caption=paste0(caption, collapse="\n")) +
       theme_minimal()
   }
   # Histogram by category
@@ -683,6 +765,7 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
       scale_x_discrete(breaks=grpRange, labels=grpRange) +
       scale_fill_manual(values=catPalette) +
       labs(title=paste0(labelGroup, " Counts by ", labelCategory), x=labelGroup, y="Count", fill=labelCategory) +
+      labs(caption=paste0(caption, collapse="\n")) +
       theme_minimal() + theme(legend.position="bottom")
   }
   # Line graphs
@@ -691,6 +774,7 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
       geom_line() + geom_point() +
       scale_color_manual(name=labelGroup, values=grpPalette) +
       labs(title=paste0(labelGroup, " Counts by ", labelTime), x=labelTime, y="Count", group=labelGroup) +
+      labs(caption=paste0(caption, collapse="\n")) +
       theme_minimal() + theme(legend.position="bottom")
   }
   # Line graphs list
@@ -698,11 +782,17 @@ PlotTopicGraphs <- function(seriesGroup, seriesCategory=NULL, seriesTime=NULL, t
     plot <- list()
     for (g in grpRange) {
       dfgTemp <- dfg[dfg$group == g, ]
+      if (!is.na(caption[g])) {
+        captionTemp <- caption[g]
+      } else {
+        captionTemp <- ""
+      }
       plot[[g]] <- ggplot(dfgTemp, aes(x=time, y=value, group=category, color=category)) +
         geom_line() + geom_point() +
         scale_color_manual(name=labelCategory, values=grpPalette) +
         labs(title=paste0(labelGroup, " ", labelCategory, " by ", labelTime, " - ", labelGroup, " ", g), 
              x=labelTime, y="Count", group=labelCategory) +
+        labs(subtitle=captionTemp) +
         theme_minimal() + theme(legend.position="bottom")
     }
   }

@@ -27,6 +27,12 @@ if (!exists("ldaTopics")) {
   load(file.path(OUTPUT_FOLDER, "ldaTopics.RData"))
 }
 
+if (file.exists(file.path(TRAIN_FOLDER, "labels.txt"))) {
+  labels <- ImportTopicLabelsFile(file.path(TRAIN_FOLDER, "labels.txt"), topics=ldaTopics$topic)
+} else {
+  labels <- NULL
+}
+
 #### BUILD BILL DESCRIPTORS ####
 
 dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")] %>%
@@ -34,6 +40,8 @@ dfDescription <- dfContent[, c("bill_id", "primary_subject", "title", "summary")
                               "sponsor", "cosponsors_dem", "cosponsors_rep", "cosponsors_ind")],
             by="bill_id") %>%
   left_join(ldaTopics[, c("id", "topic", "probability")], by=c("bill_id"="id")) %>%
+  mutate(topic = ifelse(is.na(topic), 0, topic),
+         probability = ifelse(is.na(probability), 0, probability)) %>%
   filter(latest_major_action_date > "2000-01-01") %>%
   mutate(description = ifelse(!is.na(summary), summary, title),
          description = ifelse(!is.na(primary_subject), paste0("(", primary_subject, ") ", description), description),
@@ -70,58 +78,58 @@ documentsTopicTop <- ExtractTopicsTopDocuments(dfDescription, ldaGammas, idcol="
 
 textTopicSummary <- DescribeTopicExamples(
   dfDescription, xTermsTop=termsTopicTop, xTermsDistinct=termsTopicDistinct, xDocumentsTop=documentsTopicTop,
-  title="Topic Model Using Summary Field"
+  title="Topic Model Using Summary Field", labels=labels
 )
 
 #### PLOT TOPIC GRAPHS ####
 
 plotTopics <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic"
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels
 )
 
 plotTopicsEnacted <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$flag_enacted, labelCategory="Enacted into Law"
 )
 plotTopicsPassed <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$flag_passed, labelCategory="Passed in Congress"
 )
 plotTopicsSponsor <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$sponsor_party, labelCategory="Sponsor Party"
 )
 plotTopicsCosponsor <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$cosponsor_party, labelCategory="Cosponsor Party Lean"
 )
 
 plotTopicsByIntroduction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
 )
 plotTopicsByAction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
 )
 
 plotsTopicsEnactedByAction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$flag_enacted, labelCategory="Enacted into Law",
   seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
 )
 plotsTopicsPassedByAction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$flag_passed, labelCategory="Passed in Congress",
   seriesTime=dfDescription$latest_major_action_date, labelTime="Year of Latest Action", timeFreq="Y"
 )
 plotsTopicsSponsorByIntroduction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$sponsor_party, labelCategory="Sponsor Party",
   seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
 )
 plotsTopicsCosponsorByIntroduction <- PlotTopicGraphs(
-  seriesGroup=dfDescription$topic, labelGroup="Topic",
+  seriesGroup=dfDescription$topic, labelGroup="Topic", groupLabels=labels,
   seriesCategory=dfDescription$cosponsor_party, labelCategory="Cosponsor Party Lean",
   seriesTime=dfDescription$introduced_date, labelTime="Year Introduced", timeFreq="Y"
 )

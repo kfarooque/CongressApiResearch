@@ -7,6 +7,10 @@
 TRAIN_MODEL <- TRUE
 NUMBER_TOPICS <- 8
 RANDOM_SEED <- 654
+FILTER_ACTIVE <- TRUE # only active
+FILTER_VOTED <- FALSE # only active and voted on
+FILTER_PASSED <- FALSE # only active, voted on, and passed
+FILTER_ENACTED <- FALSE # only active, voted on, passed, and enacted
 
 #### INPUTS/OUTPUTS ####
 
