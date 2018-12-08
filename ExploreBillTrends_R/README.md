@@ -4,13 +4,6 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 
 **This project is in development and outputs may be expanded.**
 
-```
-#TODO list#
-run modeling for 4, 8, 12, 16, 20 topics (use different seed this time)
-  edit labels.txt file for each of these outputs, then re-run step 3 for each
-test application of existing model to new documents
-```
-
 ### References
 * [ProPublica Congress API](https://projects.propublica.org/api-docs/congress-api/)
 * [Congress API - Download Results](https://github.com/kfarooque/CongressApiDownloadResults)

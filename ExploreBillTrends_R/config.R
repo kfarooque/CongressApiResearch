@@ -4,10 +4,10 @@
 
 #### PARAMETERS ####
 
-TRAIN_MODEL <- TRUE
-NUMBER_TOPICS <- 8
-RANDOM_SEED <- 654
-FILTER_ACTIVE <- TRUE # only active
+TRAIN_MODEL <- FALSE
+NUMBER_TOPICS <- 20
+RANDOM_SEED <- 582
+FILTER_ACTIVE <- FALSE # only active
 FILTER_VOTED <- FALSE # only active and voted on
 FILTER_PASSED <- FALSE # only active, voted on, and passed
 FILTER_ENACTED <- FALSE # only active, voted on, passed, and enacted
@@ -16,7 +16,7 @@ FILTER_ENACTED <- FALSE # only active, voted on, passed, and enacted
 
 STOPLIST_FOLDER <- file.path("resources")
 
-INPUT_ROOT <- file.path("..", "DownloadResults", "data", "bills_introduced")
+INPUT_ROOT <- file.path("..", "DownloadResults", "data", "bills_search")
 TRAIN_ROOT <- file.path("model")
 OUTPUT_ROOT <- file.path("results", "bills_search")
 
