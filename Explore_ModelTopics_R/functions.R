@@ -829,7 +829,7 @@ SavePlotToFile <- function(plot, file, width=640, height=480, res=100) {
 }
 
 
-SaveCombinedDashboard <- function(outpath, outfile, fileDescription, fileSingle, filestemMultiple, tableColumns=3) {
+SaveCombinedDashboard <- function(outpath, outfile, fileDescription, fileSingle, filestemMultiple, fileTitle="", tableColumns=3) {
   #' Save combined output from summary file, single images, and multiple images, as single dashboard file.
   #' Args:
   #'   outpath: string, path where all outputs are stored and where dashboard will be saved
@@ -837,11 +837,12 @@ SaveCombinedDashboard <- function(outpath, outfile, fileDescription, fileSingle,
   #'   fileDescription: string, name of file with summary info (summary.html)
   #'   fileSingle: vector of strings, list of all individual image files (in outpath) to put in dashboard
   #'   filestemMultiple: vector of strings, list of initial part of files (in outpath) to put in tables in dasboard
+  #'   fileTitle: string, title to use for top of file
   #'   tableColumns: integer, number of columns to use for images defined by filestemMultiple
   #' Return:
   #'   null; output dashboard html file is output to location given in outpath
   validFiles <- list.files(outpath)
-  fileStart <- c("<html>", "<head>Topic Descriptions Dashboard</head>", "<body>")
+  fileStart <- c("<html>", "<head><h1>", fileTitle, "</h1></head>", "<body>")
   fileEnd <- c("</body>", "</html>")
   sepSection <- "<hr />"
   # description section

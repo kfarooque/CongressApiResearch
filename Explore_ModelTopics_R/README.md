@@ -1,8 +1,6 @@
-# Congress API Research - Explore Bill Trends (R version)
+# Congress API Research - Explore: Model Topics (R version)
 
-Explore trends in bills based on data downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), performs LDA topic modeling, and outputs a dashboard with a summary of topics.
-
-**This project is in development and outputs may be expanded.**
+Explore trends in bills by applying topic modeling to bills downloaded via ProPublica's Congress API. This uses tab-delimited data based on the JSON files obtained via the API (see the separate project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults)), performs LDA topic modeling, and outputs a dashboard with a summary of topics.
 
 ### References
 * [ProPublica Congress API](https://projects.propublica.org/api-docs/congress-api/)
@@ -48,11 +46,12 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
 3. Run the related project [CongressApiResearch/DownloadResults](https://github.com/kfarooque/CongressApiResearch/tree/master/DownloadResults) for one or more specific queries, and note where the `results.txt` and individual bill text file(s) are saved.
 
 ### Run Project
-1. (Only need to do this once for bills to be read in) Run step 0 to create stop list:
+1. Run step 00 to create stop list (only need to do this once for bills to be read in):
   ```
   source("00_CreateStopList.R")
   ```
 2. Define parameters in `config.py`:
+  * `TITLE` = title to use for dashboard
   * `TRAIN_MODEL` = whether to train model (output to `model/*` folder) or apply existing model to new data (output to `results/*` folder)
   * `NUMBER_TOPICS` = number of topics to model in LDA training or apply from LDA model
   * `RANDOM_SEED` = random seed to use for LDA model training
@@ -61,7 +60,7 @@ Explore trends in bills based on data downloaded via ProPublica's Congress API. 
   * `INPUT_ROOT` = root path with input results.txt files and bills in deeper subfolders (often `../DownloadResults/data/*`)
   * `TRAIN_ROOT` = root path for LDA model results (will append subfolder `/k#`, where # is number of clusters used)
   * `OUTPUT_ROOT` = root path for output scored results
-3. Run steps in order (step 01 can be skipped if files are already imported):
+3. Run remaining steps in order (step 01 can be skipped if files are already imported):
   ```
   source("01_ImportData.R")
   source("02_ModelTopics.R")

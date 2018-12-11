@@ -143,11 +143,15 @@ if (!dir.exists(output_dashboard)) {
 
 write(textTopicSummary, file.path(output_dashboard, "summary.html"))
 
-SavePlotToFile(plotTopics, file.path(output_dashboard, "topics.png"))
-SavePlotToFile(plotTopicsEnacted, file.path(output_dashboard, "topics_Enacted.png"))
-SavePlotToFile(plotTopicsPassed, file.path(output_dashboard, "topics_Passed.png"))
-SavePlotToFile(plotTopicsSponsor, file.path(output_dashboard, "topics_Sponsor.png"))
-SavePlotToFile(plotTopicsCosponsor, file.path(output_dashboard, "topics_Cosponsor.png"))
+SavePlotToFile(plotTopics, file.path(output_dashboard, "topics.png"), height=640)
+SavePlotToFile(plotTopicsEnacted, file.path(output_dashboard, "topics_Enacted.png"), height=640)
+SavePlotToFile(plotTopicsPassed, file.path(output_dashboard, "topics_Passed.png"), height=640)
+SavePlotToFile(plotTopicsSponsor, file.path(output_dashboard, "topics_Sponsor.png"), height=640)
+SavePlotToFile(plotTopicsCosponsor, file.path(output_dashboard, "topics_Cosponsor.png"), height=640)
+
+SavePlotToFile(plotTopicsByIntroduction, file.path(output_dashboard, "topics_ByIntroduction.png"), height=800)
+SavePlotToFile(plotTopicsByAction, file.path(output_dashboard, "topics_ByAction.png"), height=800)
+
 SavePlotToFile(plotsTopicsEnactedByAction, file.path(output_dashboard, "topics_EnactedByAction.png"))
 SavePlotToFile(plotsTopicsPassedByAction, file.path(output_dashboard, "topics_PassedByAction.png"))
 SavePlotToFile(plotsTopicsSponsorByIntroduction, file.path(output_dashboard, "topics_SponsorByIntroduction.png"))
@@ -155,8 +159,10 @@ SavePlotToFile(plotsTopicsCosponsorByIntroduction, file.path(output_dashboard, "
 
 SaveCombinedDashboard(
   output_dashboard, "dashboard.html",
+  fileTitle=TITLE,
   fileDescription="summary.html",
-  fileSingle=c("topics.png", "topics_Enacted.png", "topics_Passed.png", "topics_Sponsor.png", "topics_Cosponsor.png"),
+  fileSingle=c("topics.png", "topics_Enacted.png", "topics_Passed.png", "topics_Sponsor.png", "topics_Cosponsor.png",
+               "topics_ByIntroduction.png", "topics_ByAction.png"),
   filestemMultiple=c("topics_EnactedByAction.png", "topics_PassedByAction.png", "topics_SponsorByIntroduction.png", "topics_CosponsorByIntroduction.png"),
   tableColumns=2
 )

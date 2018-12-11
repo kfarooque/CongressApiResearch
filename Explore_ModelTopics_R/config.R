@@ -4,6 +4,7 @@
 
 #### PARAMETERS ####
 
+TITLE <- "Topic Model with Security-Related Bills"
 TRAIN_MODEL <- FALSE
 NUMBER_TOPICS <- 20
 RANDOM_SEED <- 582
