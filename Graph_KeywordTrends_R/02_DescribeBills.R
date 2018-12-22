@@ -1,7 +1,7 @@
 #' Describe bill content and flag keywords.
 #' Inputs: dfResults, dfBills, stoplist_full.txt (from Import Data step),
 #'         KEYWORD_FILE (usually in root folder)
-#' Outputs: ??? (saved to OUTPUT folder)
+#' Outputs: dfGroups, dfKeywordsByGroup, dfFeaturesByGroup (saved to OUTPUT folder)
 
 source("config.R")
 source("functions.R")
@@ -37,12 +37,13 @@ dfScanText <- dfResults %>%
   select(bill_id, text, text_short)
 
 dfScanTextFlags <- FlagTextKeywords(dfScanText$text, labels=names(labeledKeywords), keywords=labeledKeywords)
+dfScanTextFlags <- ConvertFlagsToName(dfScanTextFlags, falsechar="none")
 names(dfScanTextFlags) <- paste0("keyword_", names(dfScanTextFlags))
 dfScanTextFlags <- cbind(dfScanText["bill_id"], dfScanTextFlags)
 
 #### DESCRIBE FEATURES ####
 
-dfDefineGroups <- left_join(dfResults, dfScanTextFlags, by="bill_id") %>%
+dfGroups <- left_join(dfResults, dfScanTextFlags, by="bill_id") %>%
   mutate(primary_subject = ifelse(is.na(primary_subject), "Undefined", primary_subject),
          introduced_year = as.character(year(introduced_date)),
          sponsor_party = gsub("^.*\\((.).*-.*\\)$", "\\1", sponsor),
@@ -61,23 +62,50 @@ dfDefineGroups <- left_join(dfResults, dfScanTextFlags, by="bill_id") %>%
                                            ifelse(!is.na(active), "ACTIVE",
                                                   "NONE"))))) %>%
   select(bill_id, primary_subject, bill_type, introduced_year, action_year, top_action, cosponsor_party, sponsor, starts_with("keyword_")) %>%
-  mutate(primary_subject_x_bill_type = paste(primary_subject, bill_type, sep=" - "),
-         primary_subject_x_introduced_year = paste(primary_subject, introduced_year, sep=" - "),
-         primary_subject_x_action_year = paste(primary_subject, action_year, sep=" - "),
-         primary_subject_x_top_action = paste(primary_subject, top_action, sep=" - "),
-         primary_subject_x_cosponsor_party = paste(primary_subject, cosponsor_party, sep=" - "),
-         primary_subject_x_sponsor = paste(primary_subject, sponsor, sep=" - "))
+  mutate(primary_subject_x_bill_type = paste(primary_subject, bill_type, sep=" / "),
+         primary_subject_x_introduced_year = paste(primary_subject, introduced_year, sep=" / "),
+         primary_subject_x_action_year = paste(primary_subject, action_year, sep=" / "),
+         primary_subject_x_top_action = paste(primary_subject, top_action, sep=" / "),
+         primary_subject_x_cosponsor_party = paste(primary_subject, cosponsor_party, sep=" / "))
+for (keyword in names(select(dfScanTextFlags, starts_with("keyword_")))) {
+  dfGroups <- unite_(dfGroups, paste0("primary_subject_x_", keyword), 
+                     c("primary_subject", keyword), sep=" / ", remove=FALSE)
+}
 
-#' TODO:
-#'   figure out if/how to join keyword flags with primary_subject 
-#'   repeat ExtractKeywordsByGroup() by each of the groups defined earlier, new df each time
-#'     e.g., ExtractKeywordsByGroup(dfScanText$text, group=dfResults$primary_subject, n=10, stoplist=stoplistWords)
+dfKeywordsByGroup <- data.frame()
+groupcols <- names(dfGroups)[-1]
+for (groupcol in groupcols) {
+  df <- ExtractKeywordsByGroup(
+    dfScanText$text, group=dfGroups[[groupcol]], 
+    n=10, stoplist=stoplistWords
+  )
+  df <- spread(df, rank, keywords, fill="") %>% 
+    unite(keywords, -group, sep=", ") %>%
+    mutate(category = groupcol) %>%
+    select(category, group, keywords)
+  dfKeywordsByGroup <- rbind(dfKeywordsByGroup, df)
+}
+rm(df)
 
-
-# TODO: (hard)
-# - function to define stand-out features by a group
-# - use ^ to define features by category of sponsor, party, passage
+dfFeaturesByGroup <- data.frame()
+groupcols <- c("primary_subject", "sponsor", "cosponsor_party", "top_action")
+features <- c("primary_subject", "introduced_year", "action_year", "sponsor", "cosponsor_party", "top_action", names(select(dfScanTextFlags, starts_with("keyword_"))))
+for (groupcol in groupcols) {
+  df <- ExtractFeaturesByGroup(
+    dfGroups, features=features[!(features %in% groupcol)], group=dfGroups[[groupcol]]
+  )
+  df$category <- groupcol
+  df <- select(df, category, group, feature, value, comparison)
+  df <- df[!(grepl("^keyword_", df$feature) & grepl("^none$", df$value)), ]
+  dfFeaturesByGroup <- rbind(dfFeaturesByGroup, df)
+}
+rm(df)
 
 #### OUTPUT ####
 
-# TODO: output files based on the above... will need many by different units of observation
+if (!dir.exists(OUTPUT_FOLDER)) {
+  dir.create(OUTPUT_FOLDER, recursive=TRUE)
+}
+save(dfGroups, file=file.path(OUTPUT_FOLDER, "dfGroups.RData"))
+save(dfKeywordsByGroup, file=file.path(OUTPUT_FOLDER, "dfKeywordsByGroup.RData"))
+save(dfFeaturesByGroup, file=file.path(OUTPUT_FOLDER, "dfFeaturesByGroup.RData"))

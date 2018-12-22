@@ -13,6 +13,33 @@ rm(reqPackages)
 #### GENERAL ####
 
 
+StatsTTest <- function(m1, m2, s1, s2, n1, n2, m0=0, equal.variance=FALSE) {
+  #' T-test for difference given sample statistics instead of raw data.
+  #' Adapted from User Macro at https://stats.stackexchange.com/questions/30394/how-to-perform-two-sample-t-tests-in-r-by-inputting-sample-statistics-rather-tha
+  #' Args:
+  #'   m1, m2: sample means
+  #'   s1, s2: sample standard deviations
+  #'   n1, n2: sample sizes
+  #'   m0: null value for difference in means, default 0
+  #'   equal.variance: whether to assume equal variance, default FALSE
+  #' Returns:
+  #'   Named vector with difference, std err, t-stat, and p-value
+  if (equal.variance==FALSE) {
+    se <- sqrt( (s1^2/n1) + (s2^2/n2) )
+    # welch-satterthwaite df
+    df <- ( (s1^2/n1 + s2^2/n2)^2 )/( (s1^2/n1)^2/(n1-1) + (s2^2/n2)^2/(n2-1) )
+  } else {
+    # pooled standard deviation, scaled by the sample sizes
+    se <- sqrt( (1/n1 + 1/n2) * ((n1-1)*s1^2 + (n2-1)*s2^2)/(n1+n2-2) )
+    df <- n1+n2-2
+  }
+  t <- (m1-m2-m0)/se 
+  dat <- c(m1-m2, se, t, 2*pt(-abs(t),df))    
+  names(dat) <- c("Difference of means", "Std Error", "t", "p-value")
+  return(dat) 
+}
+
+
 #### IMPORT DATA ####
 
 
@@ -389,6 +416,27 @@ FlagTextKeywords <- function(text, labels=NULL, keywords="") {
 }
 
 
+ConvertFlagsToName <- function(df, cols=NULL, falsechar="") {
+  #' Convert column(s) with TRUE/FALSE into character where TRUE = colname, FALSE = blank.
+  #' Args:
+  #'   df: data frame with columns to convert
+  #'   cols: character vector, column names to convert to character, leave blank to apply to all logical columns
+  #'   falsechar: string, character(s) to use to replace FALSE values
+  #' Returns:
+  #'   data frame with boolean columns replaced with character
+  if (is.null(cols)) {
+    classes <- unlist(lapply(df, class))
+    cols <- names(df)[classes == "logical"]
+  }
+  if (length(cols) > 0) {
+    for (col in cols) {
+      df[col] <- ifelse(unlist(df[col]), col, falsechar)
+    }
+  }
+  df
+}
+
+
 StemWordsHunspell <- function(text) {
   #' Apply stemming to vector of text entries or individual terms. Uses hunspell dictionary.
   #' Args:
@@ -517,7 +565,8 @@ ExtractKeywordsByGroup <- function(text, group=NULL, n=10, stoplist=NULL, dropNu
     group_list <- "1"
   } else {
     df$group <- group
-    group_list <- unique(group)
+    df$group[is.na(df$group)] <- "NA"
+    group_list <- unique(df$group)
   }
   # Extract keywords
   retVal <- data.frame()
@@ -533,6 +582,161 @@ ExtractKeywordsByGroup <- function(text, group=NULL, n=10, stoplist=NULL, dropNu
     retVal$group <- NULL
   }
   retVal
+}
+
+
+ExtractFeaturesByGroup <- function(x, features, group) {
+  #' Extract features from data frame columns, comparing groups to overall population to identify standout features.
+  #' Args:
+  #'   x: data frame with columns from which to extract features
+  #'   features: vector of column names to use for extracting features,
+  #'             numeric columns -> mean-based, logical/categorical columns -> frequency-based
+  #'   group: vector, group values to use for features, vector must be same length as number of columns in df
+  #' Returns:
+  #'   data frame with features that are outside-the-dataframe-norm for each group,
+  #'   contains columns: group (each group name), feature (each feature variable name), 
+  #'   value (statistic or feature name being compared), comparison (values compared between in/out group)
+  # Build data
+  dfAll <- x[features]
+  dfAll$group <- group
+  dfAll$group[is.na(dfAll$group)] <- "NA"
+  group_list <- unique(dfAll$group)
+  
+  # Extract notable features for each group value
+  groupFeatures <- data.frame()
+  for (g in 1:length(group_list)) {
+    group_g <- group_list[g]
+    group_flag <- dfAll$group == group_g
+    
+    # Loop through features
+    featureFlagAll <- data.frame()
+    for (feature in features) {
+      values <- dfAll[[feature]]
+      featureFlag <- NULL
+      
+      if (class(values) == "character") {
+        # Character -> flag values with higher/lower proportions in group
+        if (length(unique(values)) > 256 | length(unique(values))/length(values) > 0.10) {
+          featureFlag <- NULL
+        } else {
+          # build comparison of shares of each value
+          trialsIn <- as.data.frame(stringsAsFactors=FALSE, table(values[group_flag]))
+          trialsOut <- as.data.frame(stringsAsFactors=FALSE, table(values[!group_flag]))
+          trials <- full_join(trialsIn, trialsOut, by="Var1", suffix=c(".in", ".out"))
+          names(trials) <- c("value", "countIn", "countOut")
+          trials[is.na(trials)] <- 0
+          trials$totalIn <- sum(group_flag)
+          trials$totalOut <- sum(!group_flag)
+          trials$shareIn <- trials$countIn / trials$totalIn
+          trials$shareOut <- trials$countOut / trials$totalOut
+          trials$stdIn <- sqrt(((trials$shareIn) * (1-trials$shareIn))/trials$countIn)
+          trials$stdOut <- sqrt(((trials$shareOut) * (1-trials$shareOut))/trials$countOut)
+          # flag which values have a significant difference (rough estimate)
+          valuesFlagged <- c()
+          for (r in 1:nrow(trials)) {
+            row <- trials[r, ]
+            # flag only if more than 5 in/out of group
+            if (row$countIn > 5 & row$countOut > 5) {
+              diff <- row$shareIn - row$shareOut
+              diff_stdIn <- abs(diff / row$stdIn)
+              diff_stdOut <- abs(diff / row$stdOut)
+              if (!any(is.na(c(diff, diff_stdIn, diff_stdOut)))) {
+                # flag only if diff more than 2.326 sd apart
+                if (min(diff_stdIn, diff_stdOut) > 2.326) {
+                  valuesFlagged <- c(valuesFlagged, row$value)
+                }
+              }
+              rm(diff, diff_stdIn, diff_stdOut)
+            }
+          }
+          rm(r, row)
+          # define flagged group characteristics
+          if (length(valuesFlagged) > 0) {
+            trialsFlagged <- trials[trials$value %in% valuesFlagged, ] %>%
+              mutate(description = paste0(
+                round(shareIn, 2) * 100, "% (n=", totalIn, ")",
+                " vs ",
+                round(shareOut, 2) * 100, "% (n=", totalOut, ")"
+              ))
+            featureFlag <- trialsFlagged$description
+            names(featureFlag) <- trialsFlagged$value
+            rm(trialsFlagged)
+          } else {
+            featureFlag <- NULL
+          }
+          # cleanup
+          rm(trialsIn, trialsOut, trials, valuesFlagged)
+        }
+
+      } else if (class(values) == "numeric") {
+        # Numeric -> flag group if significantly different mean
+        if (sum(group_flag) > 5 & sum(!group_flag) > 5) {
+          ttest <- t.test(values[group_flag], values[!group_flag])
+          if (ttest$p.value <= 0.01) {
+            description <- paste0(
+              round(ttest$estimate[1], 4), " (n=", sum(group_flag), ")",
+              " vs ",
+              round(ttest$estimate[2], 4), " (n=", sum(!group_flag), ")"
+            )
+            featureFlag <- description
+            names(featureFlag) <- "mean"
+            rm(description)
+          } else {
+            featureFlag <- NULL
+          }
+          rm(ttest)
+        } else {
+          featureFlag <- NULL
+        }
+        
+      } else if (class(values) == "logical") {
+        # Logical -> flag group if significantly different proportion
+        if (sum(group_flag) > 5 & sum(!group_flag) > 5) {
+          ttest <- t.test(values[group_flag], values[!group_flag])
+          if (ttest$p.value <= 0.01) {
+            description <- paste0(
+              round(ttest$estimate[1], 2) * 100, "% (n=", sum(group_flag), ")",
+              " vs ",
+              round(ttest$estimate[2], 2) * 100, "% (n=", sum(!group_flag), ")"
+            )
+            featureFlag <- description
+            names(featureFlag) <- "proportion"
+            rm(description)
+          } else {
+            featureFlag <- NULL
+          }
+          rm(ttest)
+        } else {
+          featureFlag <- NULL
+        }
+        
+      }
+      
+      # Add onto list of feature flags
+      if (!is.null(featureFlag)) {
+        featureFlagAll <- rbind(featureFlagAll, 
+                                data.frame(stringsAsFactors=FALSE, 
+                                           feature=feature, 
+                                           value=names(featureFlag), 
+                                           comparison=featureFlag))
+      }
+      rm(featureFlag)
+      
+    }
+    
+    # Add onto list of group features
+    if (nrow(featureFlagAll) > 0) {
+      groupFeatures <- rbind(groupFeatures,
+                             data.frame(stringsAsFactors=FALSE, 
+                                        group=group_g, 
+                                        feature=featureFlagAll$feature, 
+                                        value=featureFlagAll$value,
+                                        comparison=featureFlagAll$comparison))
+    }
+    rm(featureFlagAll)
+  }
+  
+  groupFeatures
 }
 
 
