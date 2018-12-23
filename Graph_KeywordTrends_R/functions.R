@@ -572,9 +572,14 @@ ExtractKeywordsByGroup <- function(text, group=NULL, n=10, stoplist=NULL, dropNu
   retVal <- data.frame()
   for (g in 1:length(group_list)) {
     group_g <- group_list[g]
-    keywords_g <- ExtractKeywordsViaDtm(df[df$group == group_g, c("doc_id", "text")], 
-                                        n=n, stoplist=stoplist, dropNumbers=dropNumbers, stemWords=stemWords)
-    newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=keywords_g, rank=1:length(keywords_g))
+    if (sum(df$group == group_g) > 5) {
+      keywords_g <- ExtractKeywordsViaDtm(df[df$group == group_g, c("doc_id", "text")],
+                                          n=n, stoplist=stoplist, dropNumbers=dropNumbers, stemWords=stemWords)
+      newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=keywords_g, rank=1:length(keywords_g))
+    } else {
+      keywords_g <- ""
+      newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=as.character(NA), rank=as.character(NA))
+    }
     retVal <- rbind(retVal, newrows_g)
   }
   # Remove group if not needed
@@ -741,4 +746,65 @@ ExtractFeaturesByGroup <- function(x, features, group) {
 
 
 #### TABLES AND GRAPHS ####
+
+
+BuildTextSummary <- function(group, text=NULL, df_keywords=NULL, df_features=NULL) {
+  #' Build text summary by group values, using additional information from keywords and features data.
+  #' Args:
+  #'   group: vector, contains values for each group in the category to be examined, used for counts
+  #'   text: (optional) vector of strings, contains text description of each document, used for displaying examples,
+  #'         must be same length as group if defined
+  #'   df_keywords: (optional) data frame from output of ExtractKeywordsByGroup, 
+  #'                must have group and keyword columns
+  #'   df_features: (optional) data frame from output of ExtractFeaturesByGroup, 
+  #'                must have group, feature, value, and comparison columns
+  #' Returns:
+  #'   data frame with row for each group, and columns group (group name), count, share,
+  #'   and optionally examples (up to 3 examples), keywords, and/or features
+  retVal <- data.frame()
+  group[is.na(group)] <- "NA"
+  grouplist <- unique(group)
+  for (g in 1:length(grouplist)) {
+    group_g <- grouplist[g]
+    summary_g <- data.frame(stringsAsFactors=FALSE,
+                            group = group_g,
+                            count = sum(group == group_g),
+                            share = round(sum(group == group_g) / length(group), 2))
+    if (!is.null(text)) {
+      examples <- text[group == group_g]
+      if (length(examples) > 3) {
+        examples <- sample(examples, 3)
+      }
+      examples <- substr(examples, 1, 96)
+      examples <- paste0(examples, collapse="\n")
+      summary_g$examples <- examples
+      rm(examples)
+    }
+    if (!is.null(df_keywords)) {
+      keywords <- df_keywords[df_keywords$group == group_g, "keywords"]
+      if (length(keywords) == 0) {
+        keywords <- ""
+      }
+      summary_g$keywords <- keywords
+      rm(keywords)
+    }
+    if (!is.null(df_features)) {
+      features_all <- df_features[df_features$group == group_g, c("feature", "value", "comparison")]
+      if (nrow(features_all) > 0) {
+        features_all$comparison <- gsub(" \\(n=(\\d|\\.|,)+\\)", "", features_all$comparison)
+        features_list <- paste0(features_all$feature, " ", features_all$value, " (", features_all$comparison, ")")
+        features <- paste0(features_list, collapse="\n")
+        rm(features_list)
+      } else {
+        features <- ""
+      }
+      summary_g$features <- features
+      rm(features_all, features)
+    }
+    retVal <- rbind(retVal, summary_g)
+  }
+  retVal
+}
+
+
 

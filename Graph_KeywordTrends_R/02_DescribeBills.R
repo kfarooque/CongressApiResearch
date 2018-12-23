@@ -79,6 +79,12 @@ for (groupcol in groupcols) {
     dfScanText$text, group=dfGroups[[groupcol]], 
     n=10, stoplist=stoplistWords
   )
+  if (grepl("^keyword_", groupcol)) {
+    df <- df[!grepl("^none$|^none / ", df$group), ]
+  }
+  if (grepl("^.*_x_keyword_", groupcol)) {
+    df <- df[!grepl("^none$| / none$", df$group), ]
+  }
   df <- spread(df, rank, keywords, fill="") %>% 
     unite(keywords, -group, sep=", ") %>%
     mutate(category = groupcol) %>%
@@ -88,15 +94,22 @@ for (groupcol in groupcols) {
 rm(df)
 
 dfFeaturesByGroup <- data.frame()
-groupcols <- c("primary_subject", "sponsor", "cosponsor_party", "top_action")
-features <- c("primary_subject", "introduced_year", "action_year", "sponsor", "cosponsor_party", "top_action", names(select(dfScanTextFlags, starts_with("keyword_"))))
+groupcols <- names(dfGroups)[-1]
+features <- names(dfGroups)[-1]
 for (groupcol in groupcols) {
   df <- ExtractFeaturesByGroup(
     dfGroups, features=features[!(features %in% groupcol)], group=dfGroups[[groupcol]]
   )
+  if (grepl("^keyword_", groupcol)) {
+    df <- df[!grepl("^none$|^none / ", df$group), ]
+  }
+  if (grepl("^.*_x_keyword_", groupcol)) {
+    df <- df[!grepl("^none$| / none$", df$group), ]
+  }
+  df <- df[!(grepl("^keyword_", df$feature) & grepl("^none$|^none / ", df$value)), ]
+  df <- df[!(grepl("^.*_x_keyword_", df$feature) & grepl("^none$| / none$", df$value)), ]
   df$category <- groupcol
   df <- select(df, category, group, feature, value, comparison)
-  df <- df[!(grepl("^keyword_", df$feature) & grepl("^none$", df$value)), ]
   dfFeaturesByGroup <- rbind(dfFeaturesByGroup, df)
 }
 rm(df)

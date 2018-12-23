@@ -4,7 +4,7 @@
 
 #### PARAMETERS ####
 
-TITLE <- ""
+TITLE <- "Explore trends in bills since 2016"
 FILTER_ACTIVE <- FALSE # only active
 FILTER_VOTED <- FALSE # only active and voted on
 FILTER_PASSED <- FALSE # only active, voted on, and passed
