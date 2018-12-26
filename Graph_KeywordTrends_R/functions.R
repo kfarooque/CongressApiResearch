@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "tidytext", "corpus", "tm", "SnowballC", "lubridate")
+reqPackages <- c("readxl", "dplyr", "tidyr", "tidytext", "corpus", "tm", "SnowballC", "lubridate", "ggplot2")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
@@ -807,4 +807,45 @@ BuildTextSummary <- function(group, text=NULL, df_keywords=NULL, df_features=NUL
 }
 
 
+WriteGroupDescriptions <- function(x, title) {
+  #' Describe groups in data using columns with count, share, keywords, examples, and features.
+  #' Args:
+  #'   x: dataframe with group descriptions, must have columns: count, share, keywords, examples, and features,
+  #'      usually is output of BuildTextSummary() function.
+  #'   title: (optional) string with title for descriptions
+  #' Returns:
+  #'   vector of lines of HTML for group descriptions
+  # Headers and separators
+  exampleCharLimit <- 320
+  if (is.null(title)) {
+    title <- "Group Descriptions"
+  } else {
+    title <- paste0(title, " Descriptions")
+  }
+  header <- paste0("<h1>", title, " (", nrow(x), " groups)", "</h1>")
+  rowStart <- "<table border=0><tr><td>"
+  rowEnd <- "</td></tr></table>"
+  rowIndent <- "&nbsp; &nbsp; &nbsp; "
+  # Build lines
+  lines <- c(header, "<p></p>")
+  for (r in 1:nrow(x)) {
+    row <- x[r, ]
+    lineHeader <- paste0("<b>Group #", r, ":</b> ", row$group, "<br />")
+    lineCounts <- paste0("<b>Records:</b> ", row$count, " (", row$share * 100, "%)", "<br />")
+    lineKeywords <- paste0("<b>Keywords:</b> ", "<br />", rowIndent, row$keywords, "<br />")
+    lineFeatures <- paste0("<b>Notable Features:</b> ", "<br />",
+                           gsub("\n", "<br />", row$features, fixed=TRUE),
+                           "<br />")
+    lineExamples <- paste0("<b>Document Examples:</b> ", "<br />",
+                           gsub("\n", "<br />", substr(row$examples, 1, exampleCharLimit), fixed=TRUE),
+                           "<br />")
+    newlines <- c(rowStart, 
+                  "<p>", lineHeader, lineCounts, lineKeywords, "</p>",
+                  "<p>", lineFeatures, "</p>",
+                  "<p>", lineExamples, "</p>",
+                  rowEnd)
+    lines <- c(lines, newlines)
+  }
+  lines
+}
 
