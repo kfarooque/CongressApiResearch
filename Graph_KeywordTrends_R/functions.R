@@ -40,6 +40,56 @@ StatsTTest <- function(m1, m2, s1, s2, n1, n2, m0=0, equal.variance=FALSE) {
 }
 
 
+CustomPalette <- function(n, drop="") {
+  #' Define a custom palette for this project.
+  #' Args:
+  #'   n: integer, number of colors to use
+  #'   drop: character vector, colors to not use in palette that is returned
+  #' Returns:
+  #'   vector of RGB color values
+  # Palette adapted from pals package, polychrome palette
+  paletteMain <- c(
+    "#3283FE", "#C4451C", "#B5EFB5", "#DEA0FD", "#1CFFCE", "#FEAF16", 
+    "#325A9B", "#822E1C", "#1C8356", "#782AB6", "#7ED7D1", "#FBE426", 
+    "#3B00FB", "#F6222E", "#1CBE4F", "#AA0DFE", "#5A5156", "#FC1CBF", 
+    "#66B0FF", "#F8A19F", "#90AD1C", "#D85FF7", "#BDCDFF", "#85660D", 
+    "#1C7F93", "#B00068", "#AAF400", "#B10DA1", "#E4E1E3", "#F7E1A0", 
+    "#2ED9FF", "#FA0087", "#16FF32", "#FE00FA", "#683B79", "#C075A6"
+  )
+  paletteMain <- paletteMain[!(paletteMain %in% drop)]
+  # Palette adapted from Tatarize's blog (http://godsnotwheregodsnot.blogspot.com/2013/11/kmeans-color-quantization-seeding.html)
+  paletteLarge <- c(
+    "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059", "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87", "#5A0007", 
+    "#809693", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80", "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100", "#7B4F4B", "#A1C299", 
+    "#300018", "#0AA6D8", "#013349", "#00846F", "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", 
+    "#B77B68", "#7A87A1", "#788D66", "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C", "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", 
+    "#A3C8C9", "#FF913F", "#938A81", "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00", "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", 
+    "#772600", "#D790FF", "#9B9700", "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329", "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", 
+    "#A4E804", "#324E72", "#6A3A4C", "#83AB58", "#D1F7CE", "#004B28", "#C8D0F6", "#A3A489", "#806C66", "#222800", "#BF5650", "#E83000", "#66796D", "#DA007C", "#FF1A59", "#8ADBB4", 
+    "#5B4E51", "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58", "#7A7BFF", "#D68E01", "#353339", "#78AFA1", "#FEB2C6", "#75797C", "#837393", 
+    "#943A4D", "#B5F4FF", "#D2DCD5", "#9556BD", "#6A714A", "#FC009C", "#02525F", "#0AA3F7", "#E98176", "#DBD5DD", "#5EBCD1", "#3D4F44", "#7E6405", "#02684E", "#962B75", "#8D8546", 
+    "#9695C5", "#E773CE", "#D86A78", "#3E89BE", "#CA834E", "#518A87", "#5B113C", "#55813B", "#E704C4", "#00005F", "#A97399", "#4B8160", "#59738A", "#FF5DA7", "#F7C9BF", "#643127", 
+    "#513A01", "#6B94AA", "#51A058", "#A45B02", "#92896B", "#E20027", "#E7AB63", "#4C6001", "#9C6966", "#64547B", "#97979E", "#006A66", "#391406", "#F4D749", "#0045D2", "#006C31", 
+    "#DDB6D0", "#7C6571", "#9FB2A4", "#00D891", "#15A08A", "#BC65E9", "#C6DC99", "#203B3C", "#671190", "#6B3A64", "#F5E1FF", "#FFA0F2", "#CCAA35", "#374527", "#8BB400", "#797868", 
+    "#C6005A", "#3B000A", "#C86240", "#29607C", "#402334", "#7D5A44", "#CCB87C", "#B88183", "#AA5199", "#B5D6C3", "#A38469", "#9F94F0", "#A74571", "#B894A6", "#71BB8C", "#00B433", 
+    "#789EC9", "#6D80BA", "#953F00", "#5EFF03", "#1BE177", "#BCB1E5", "#76912F", "#0060CD", "#D20096", "#895563", "#29201D", "#5B3213", "#A76F42", "#89412E", "#1A3A2A", "#494B5A", 
+    "#A88C85", "#F4ABAA", "#A3F3AB", "#00C6C8", "#EA8B66", "#958A9F", "#BDC9D2", "#9FA064", "#BE4700", "#658188", "#83A485", "#453C23", "#47675D", "#3A3F00", "#DFFB71", "#868E7E", 
+    "#98D058", "#6C8F7D", "#D7BFC2", "#3C3E6E", "#D83D66", "#2F5D9B", "#6C5E46", "#D25B88", "#5B656C", "#00B57F", "#545C46", "#866097", "#365D25", "#252F99", "#00CCFF", "#674E60"
+  )
+  paletteLarge <- paletteLarge[!(paletteLarge %in% drop)]
+  # Define palette
+  if (n <= length(paletteMain)) {
+    retVal <- paletteMain
+  } else if (n <= length(paletteLarge)) {
+    retVal <- c(paletteMain, sample(paletteLarge, n))
+  } else if (n > length(paletteLarge)) {
+    retVal <- c(paletteMain, sample(paletteLarge, length(paletteLarge)))
+    retVal <- c(retVal, heat.colors(n-length(paletteLarge)))
+  }
+  retVal[1:n]
+}
+
+
 #### IMPORT DATA ####
 
 
@@ -848,4 +898,169 @@ WriteGroupDescriptions <- function(x, title) {
   }
   lines
 }
+
+
+GraphBarLineGroups <- function(x, ycol=NULL, xcol=NULL, gcol=NULL, ycolStat="count", xcolTime=NULL, title=NULL) {
+  #' Graph data using lines/bars separated by groups. Graph type depends on input data types.
+  #' Uses functions: CustomPalette()
+  #' Args:
+  #'   x: input data frame with all records to be graphed, must have columns named in ycol/xcol/gcol
+  #'   ycol: name of column corresponding to y-axis values, leave blank to use n (count),
+  #'         must be numeric, will use mean if multiple values in group
+  #'   xcol: name of column corresponding to x-axis values,
+  #'         if category/logical then will create bar graph, if numeric/date then will create line graph
+  #'   gcol: name of column corresponding to group values, leave blank to not use groups
+  #'         must be character or coerced to character, will generate multiple bars or lines with legend
+  #'   ycolStat: statistic to use to summarize ycol (if defined) if there are multiple values per group;
+  #'             valid values: "count", "sum", "mean", "median", "min", "max"
+  #'   xcolTime: character string indicating how xcol should be translated to date, leave blank if not needed;
+  #'             "y" = convert xcol to year, "ym" = convert to year-month, "ymd" = convert to year-month-day
+  #'   title: character, optional title to use for graph, leave blank to use default "y by x by group" title
+  #' Returns:
+  #'   plot object
+  # Define data
+  df <- x[NULL]
+  if (!is.null(gcol)) {
+    df$g <- as.character(x[[gcol]])
+  } else {
+    df$g <- ""
+  }
+  if (!is.null(xcol)) {
+    df$x <- x[[xcol]]
+  } else {
+    df$x <- 1
+  }
+  if (!is.null(ycol)) {
+    df$y <- as.numeric(x[[ycol]])
+  } else {
+    df$y <- 1
+  }
+  if (!is.null(xcolTime) & is.Date(df$x)) {
+    if (toupper(xcolTime) == "Y") {
+      df$x <- as.Date(format(df$x, "%Y-01-01"))
+    } else if (toupper(xcolTime) == "YM") {
+      df$x <- as.Date(format(df$x, "%Y-%m-01"))
+    } else if (toupper(xcolTime) == "YMD") {
+      df$x <- as.Date(format(df$x, "%Y-%m-%d"))
+    }
+  }
+  if (!is.null(ycolStat) & !is.null(ycol)) {
+    df <- arrange(df, g, x) %>%
+      group_by(g, x)
+    if (toupper(ycolStat) == "COUNT") {
+      df <- summarize(df, y=n())
+    } else if (toupper(ycolStat) == "SUM") {
+      df <- summarize(df, y=sum(y, na.rm=TRUE))
+    } else if (toupper(ycolStat) == "MEAN") {
+      df <- summarize(df, y=mean(y, na.rm=TRUE))
+    } else if (toupper(ycolStat) == "MEDIAN") {
+      df <- summarize(df, y=median(y, na.rm=TRUE))
+    } else if (toupper(ycolStat) == "MIN") {
+      df <- summarize(df, y=min(y, na.rm=TRUE))
+    } else if (toupper(ycolStat) == "MAX") {
+      df <- summarize(df, y=max(y, na.rm=TRUE))
+    }
+  } else {
+    df <- arrange(df, g, x) %>%
+      group_by(g, x)
+    df <- summarize(df, y=n())
+  }
+  
+  # Define graph features
+  if (class(df$x) %in% c("character", "logical")) {
+    graphShape <- "bar"
+  } else {
+    graphShape <- "line"
+  }
+  if (!is.null(gcol)) {
+    graphGroups <- "many"
+  } else {
+    graphGroups <- "one"
+  }
+  if (!is.null(ycol)) {
+    if (!is.null(ycolStat)) {
+      ylabel <- paste0(ycol, " (", ycolStat, ")")
+    } else {
+      ylabel <- ycol
+    }
+    ymin <- min(0, min(df$y, na.rm=TRUE))
+  } else {
+    ylabel <- "count"
+    ymin <- 0
+  }
+  if (!is.null(xcol)) {
+    xlabel <- xcol
+    xvalues <- unique(df$x)
+  } else {
+    xlabel <- ""
+    xvalues <- ""
+  }
+  if (!is.null(gcol)) {
+    glabel <- gcol
+    gvalues <- unique(df$g)
+    gpalette <- rep(as.character(NA), length(gvalues))
+    gpalette[gvalues == "B"] <- "#DEA0FD"
+    gpalette[gvalues == "I"] <- "#B5EFB5"
+    gpalette[gvalues == "D"] <- "#3283FE"
+    gpalette[gvalues == "R"] <- "#C4451C"
+    gpalette[gvalues == "TRUE"] <- "#1CFFCE"
+    gpalette[gvalues == "FALSE"] <- "#FEAF16"
+    if (any(is.na(gpalette))) {
+      gpalette[is.na(gpalette)] <- CustomPalette(sum(is.na(gpalette)), drop=gpalette[!is.na(gpalette)])
+    }
+  } else {
+    glabel <- ""
+    gvalues <- ""
+    gpalette <- c("#666666")
+  }
+  if (!is.null(title)) {
+    title <- as.character(title)
+    if (glabel != "") {
+      subtitle <- paste0(ylabel, " by ", xlabel, " by ", glabel)
+    } else {
+      subtitle <- paste0(ylabel, " by ", xlabel)
+    }
+  } else {
+    if (glabel != "") {
+      title <- paste0(ylabel, " by ", xlabel, " by ", glabel)
+    } else {
+      title <- paste0(ylabel, " by ", xlabel)
+    }
+    subtitle <- NULL
+  }
+  
+  # Generate graph
+  if (graphShape == "bar" & graphGroups == "one") {
+    plot <- ggplot(df, aes(x=x, y=y)) +
+      geom_bar(stat="identity", width=0.75, color="black", position=position_dodge()) +
+      scale_fill_manual(values=gpalette) +
+      labs(title=title, subtitle=subtitle, x=xlabel, y=ylabel) +
+      theme_minimal() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
+  }
+  if (graphShape == "bar" & graphGroups == "many") {
+    plot <- ggplot(df, aes(x=x, y=y, fill=g)) +
+      geom_bar(stat="identity", width=0.75, color="black", position=position_dodge()) +
+      scale_fill_manual(values=gpalette) +
+      labs(title=title, subtitle=subtitle, x=xlabel, y=ylabel, fill=glabel) +
+      theme_minimal() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5), legend.position="right")
+  }
+  if (graphShape == "line" & graphGroups == "one") {
+    plot <- ggplot(df, aes(x=x, y=y)) +
+      geom_line() + geom_point() +
+      scale_y_continuous(limits=c(ymin, NA)) +
+      scale_color_manual(values=gpalette) +
+      labs(title=title, subtitle=subtitle, x=xlabel, y=ylabel) +
+      theme_minimal() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
+  }
+  if (graphShape == "line" & graphGroups == "many") {
+    plot <- ggplot(df, aes(x=x, y=y, group=g, color=g)) +
+      geom_line() + geom_point() +
+      scale_y_continuous(limits=c(ymin, NA)) +
+      scale_color_manual(name=glabel, values=gpalette) +
+      labs(title=title, subtitle=subtitle, x=xlabel, y=ylabel, group=glabel) +
+      theme_minimal() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5), legend.position="right")
+  }
+  plot
+}
+
 
