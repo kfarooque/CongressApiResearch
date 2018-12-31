@@ -857,12 +857,14 @@ BuildTextSummary <- function(group, text=NULL, df_keywords=NULL, df_features=NUL
 }
 
 
-WriteGroupDescriptions <- function(x, title) {
+WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
   #' Describe groups in data using columns with count, share, keywords, examples, and features.
   #' Args:
   #'   x: dataframe with group descriptions, must have columns: count, share, keywords, examples, and features,
   #'      usually is output of BuildTextSummary() function.
   #'   title: (optional) string with title for descriptions
+  #'   name_list: (optional) named character vector, can be used to rename text fields based on columns,
+  #'              each entry must be "existing_name"="new_name" (e.g., c("val1"="Val 1", "val2"="Val 2"))
   #' Returns:
   #'   vector of lines of HTML for group descriptions
   # Headers and separators
@@ -870,7 +872,7 @@ WriteGroupDescriptions <- function(x, title) {
   if (is.null(title)) {
     title <- "Group Descriptions"
   } else {
-    title <- paste0(title, " Descriptions")
+    title <- as.character(title)
   }
   header <- paste0("<h1>", title, " (", nrow(x), " groups)", "</h1>")
   rowStart <- "<table border=0><tr><td>"
@@ -883,8 +885,22 @@ WriteGroupDescriptions <- function(x, title) {
     lineHeader <- paste0("<b>Group #", r, ":</b> ", row$group, "<br />")
     lineCounts <- paste0("<b>Records:</b> ", row$count, " (", row$share * 100, "%)", "<br />")
     lineKeywords <- paste0("<b>Keywords:</b> ", "<br />", rowIndent, row$keywords, "<br />")
+    vectorFeatures <- unlist(strsplit(row$features, "\n", fixed=TRUE))
+    if (!is.null(name_list)) {
+      if (length(vectorFeatures) > 0) {
+        for (f in 1:length(vectorFeatures)) {
+          element <- regmatches(vectorFeatures[f], regexpr("^(\\w+)", vectorFeatures[f]))
+          if (element %in% names(name_list)) {
+            vectorFeatures[f] = gsub(paste0("^", element, " "), paste0(name_list[element], " = "), vectorFeatures[f])
+          } else {
+            vectorFeatures[f] = gsub(paste0("^", element, " "), paste0(element, " = "), vectorFeatures[f])
+          }
+          rm(element)
+        }
+      }
+    }
     lineFeatures <- paste0("<b>Notable Features:</b> ", "<br />",
-                           gsub("\n", "<br />", row$features, fixed=TRUE),
+                           paste0(vectorFeatures, collapse="<br />"),
                            "<br />")
     lineExamples <- paste0("<b>Document Examples:</b> ", "<br />",
                            gsub("\n", "<br />", substr(row$examples, 1, exampleCharLimit), fixed=TRUE),
@@ -1063,4 +1079,68 @@ GraphBarLineGroups <- function(x, ycol=NULL, xcol=NULL, gcol=NULL, ycolStat="cou
   plot
 }
 
+
+LoopGraphBarLineGroups <- function(df, xcol_list=NA, gcol_list=NA, bygroup=NA, name_list=NULL) {
+  #' Loops through GraphBarLineGroups function to graph for multiple xcol/gcol parameters.
+  #' Uses functions: GraphBarLineGroups(), CustomPalette()
+  #' Args:
+  #'   df: data frame with data to be graphed, must have columns in xcol_list and gcol_list
+  #'   xcol_list: character vector, value(s) to be used for x column (xcol parameter) per graph
+  #'   gcol_list: (optional) character vector, value(s) to be used for group (gcol parameter) per graph,
+  #'              use NA as an entry to skip use of gcol (i.e., not use groups)
+  #'   bygroup: (optional) character, name of variable used to split graphs into separate item per value
+  #'   name_list: (optional) named character vector, can be used to rename axes based on columns,
+  #'              each entry must be "existing_name"="new_name" (e.g., c("val1"="Val 1", "val2"="Val 2"))
+  #' Returns:
+  #'   named list of plot objects
+  # define by-group values
+  if (!is.na(bygroup)) {
+    groups <- df[[bygroup]]
+    group_list <- unique(groups)
+    if (bygroup %in% names(name_list)) {
+      group_label <- name_list[bygroup]
+    } else {
+      group_label <- bygroup
+    }
+  }
+  # iterate through each xcol/gcol value
+  plots <- list()
+  for (xcol in xcol_list) {
+    for (gcol in gcol_list) {
+      if (!is.na(gcol)) {
+        dfg <- df[c(xcol, gcol)]
+        if (xcol %in% names(name_list)) {
+          names(dfg)[names(dfg) == xcol] <- name_list[xcol]
+        }
+        if (gcol %in% names(name_list)) {
+          names(dfg)[names(dfg) == gcol] <- name_list[gcol]
+        }
+        plots[[paste0(xcol, "-", gcol)]] <- GraphBarLineGroups(dfg, xcol=names(dfg)[1], gcol=names(dfg)[2])
+        if (!is.na(bygroup)) {
+          for (groupval in group_list) {
+            plot_title <- paste0(group_label, ": ", groupval)
+            plot_label <- paste0(xcol, "-", gcol, ", ", plot_title)
+            plots[[plot_label]] <- GraphBarLineGroups(dfg[groups == groupval,], title=plot_title,
+                                                      xcol=names(dfg)[1], gcol=names(dfg)[2])
+          }
+        }
+      } else {
+        dfg <- dfGroupsGraph[xcol]
+        if (xcol %in% names(name_list)) {
+          names(dfg)[names(dfg) == xcol] <- name_list[xcol]
+        }
+        plots[[xcol]] <- GraphBarLineGroups(dfg, xcol=names(dfg)[1])
+        if (!is.na(bygroup)) {
+          for (groupval in group_list) {
+            plot_title <- paste0(group_label, ": ", groupval)
+            plot_label <- paste0(xcol, ", ", plot_title)
+            plots[[plot_label]] <- GraphBarLineGroups(dfg[groups == groupval,], title=plot_title,
+                                                      xcol=names(dfg)[1])
+          }
+        }
+      }
+    }
+  }
+  plots
+}
 

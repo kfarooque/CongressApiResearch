@@ -20,6 +20,27 @@ if (!exists("dfFeaturesByGroup")) {
   load(file.path(OUTPUT_FOLDER, "dfFeaturesByGroup.RData"))
 }
 
+#### FORMAT DATA ####
+
+dfGroupsGraph <- dfGroups %>%
+  mutate(introduced_year = as.numeric(introduced_year),
+         action_year = as.numeric(action_year))
+namesList <- c(
+  "primary_subject"="Primary Subject",
+  "bill_type"="Bill Type",
+  "introduced_year"="Year Introduced",
+  "action_year"="Year of Latest Action",
+  "top_action"="Furthest Action",
+  "sponsor_party"="Sponsor Party",
+  "cosponsor_party"="Cosponsor Party Lean",
+  "primary_subject_x_bill_type"="Primary Subject + Bill Type",
+  "primary_subject_x_introduced_year"="Primary Subject + Year Introduced",
+  "primary_subject_x_action_year"="Primary Subject + Year of Latest Action",
+  "primary_subject_x_top_action"="Primary Subject + Furthest Action",
+  "primary_subject_x_sponsor_party"="Primary Subject + Sponsor Party",
+  "primary_subject_x_cosponsor_party"="Primary Subject + Cosponsor Party Lean"
+)
+
 #### BUILD TEXT SUMMARY ####
 
 dfTextSummary <- data.frame()
@@ -41,8 +62,9 @@ for (groupcol in groupcols) {
   df$category <- groupcol
   df <- select(df, category, group, count, share, examples, keywords, features)
   dfTextSummary <- rbind(dfTextSummary, df)
+  rm(df)
 }
-rm(df)
+rm(groupcol, groupcols, exampleText)
 
 #### DECIDE DYNAMIC GRAPHS ####
 
@@ -59,78 +81,58 @@ for (groupcol in groupcols) {
   df <- rbind(data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=as.character(NA)),
               data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=features))
   dfGraphInstructions <- rbind(dfGraphInstructions, df)
+  rm(features, features_combo, features_normal, df)
 }
-rm(df)
+rm(groupcol, groupcols)
 
 #### TEXT OUTPUT ####
 
-listTextSummary <- list()
-categories <- c("primary_subject", "bill_type", "introduced_year", "action_year", "top_action", "cosponsor_party")
+textSummary <- list()
+categories <- c("primary_subject", "bill_type", "introduced_year", "action_year", "top_action", "sponsor_party", "cosponsor_party")
 for (category in categories) {
-  vectorTextSummary <- WriteGroupDescriptions(dfTextSummary[dfTextSummary$category == category, ], title=category)
-  listTextSummary[[category]] <- vectorTextSummary
+  if (category %in% names(namesList)) {
+    title <- paste0(namesList[category], " Description")
+  } else {
+    title <- paste0(category, " Description")
+  }
+  vectorTextSummary <- WriteGroupDescriptions(dfTextSummary[dfTextSummary$category == category, ], 
+                                              title=title, name_list=namesList)
+  textSummary[[category]] <- vectorTextSummary
+  rm(title, vectorTextSummary)
 }
-rm(vectorTextSummary)
+rm(category, categories)
 
-#### GRAPH OUTPUT - MAIN ####
+#### GRAPH OUTPUT ####
 
-namesOld <- c("primary_subject", "bill_type", "introduced_year", "action_year", "top_action", "cosponsor_party")
-namesNew <- c("Primary Subject", "Bill Type", "Year Introduced", "Year of Latest Action", "Furthest Action", "Cosponsor Party Lean")
-dfGroupsGraph <- dfGroups %>%
-  mutate(introduced_year = as.numeric(introduced_year),
-         action_year = as.numeric(action_year))
+graphsBars <- LoopGraphBarLineGroups(
+  dfGroupsGraph, name_list=namesList,
+  xcol_list="primary_subject",
+  gcol_list=c(NA, "bill_type", "top_action", "sponsor_party", "cosponsor_party")
+)
+graphsLines <- LoopGraphBarLineGroups(
+  dfGroupsGraph, name_list=namesList,
+  xcol_list=c("introduced_year", "action_year"),
+  gcol_list=c("primary_subject", "cosponsor_party")
+)
+graphsLineGroups <- LoopGraphBarLineGroups(
+  dfGroupsGraph, name_list=namesList, bygroup="primary_subject",
+  xcol_list="introduced_year",
+  gcol_list=c("top_action", "cosponsor_party")
+)
 
-listGraphMain <- list()
-
-#TODO: graph output with predefined features
-# - decide which of the below are worth keeping
-# - put in loop with namesOld/namesNew being used to rename variables and actions
-# - within each iteration of the loop, add to listGraphMain
-
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject")
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject", gcol="bill_type")
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="primary_subject", gcol="cosponsor_party")
-
-GraphBarLineGroups(dfGroupsGraph, xcol="bill_type")
-GraphBarLineGroups(dfGroupsGraph, xcol="bill_type", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="bill_type", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="bill_type", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="bill_type", gcol="cosponsor_party")
-
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="primary_subject")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="bill_type")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="introduced_year", gcol="cosponsor_party")
-
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="primary_subject")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="bill_type")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="action_year", gcol="cosponsor_party")
-
-GraphBarLineGroups(dfGroupsGraph, xcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="top_action", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="top_action", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="top_action", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="top_action", gcol="cosponsor_party")
-
-GraphBarLineGroups(dfGroupsGraph, xcol="cosponsor_party")
-GraphBarLineGroups(dfGroupsGraph, xcol="cosponsor_party", gcol="introduced_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="cosponsor_party", gcol="action_year")
-GraphBarLineGroups(dfGroupsGraph, xcol="cosponsor_party", gcol="top_action")
-GraphBarLineGroups(dfGroupsGraph, xcol="cosponsor_party", gcol="cosponsor_party")
-
-#### GRAPH OUTPUT - DYNAMIC ####
-
-#TODO: graph output with dynamic features from dfGraphInstructions, using dfGraphInstructions
+graphsDynamic <- list()
+categories <- unique(dfGraphInstructions$category)
+for (category in categories) {
+  dfVars <- dfGraphInstructions[dfGraphInstructions$category == category, c("var1", "var2")]
+  graphs <- LoopGraphBarLineGroups(
+    dfGroupsGraph, name_list=namesList,
+    xcol_list=unique(dfVars$var1), 
+    gcol_list=unique(dfVars$var2)
+  )
+  graphsDynamic[[category]] <- graphs
+  rm(dfVars, graphs)
+}
+rm(category, categories)
 
 #### BUILD DASHBOARD ####
 
@@ -139,4 +141,7 @@ if (!dir.exists(output_dashboard)) {
   dir.create(output_dashboard, recursive=TRUE)
 }
 
-#TODO: build dashboards using text output, graph output - main, graph output - dynamic
+#TODO: build dashboards using text and graph outputs:
+# textSummary (list)
+# graphsBars (list), graphsLines (list), graphsLineGroups (list)
+# graphsDynamic (list of lists)

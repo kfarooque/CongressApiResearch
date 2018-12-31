@@ -61,11 +61,12 @@ dfGroups <- left_join(dfResults, dfScanTextFlags, by="bill_id") %>%
                                     ifelse(!is.na(last_vote), "VOTED",
                                            ifelse(!is.na(active), "ACTIVE",
                                                   "NONE"))))) %>%
-  select(bill_id, primary_subject, bill_type, introduced_year, action_year, top_action, cosponsor_party, sponsor, starts_with("keyword_")) %>%
+  select(bill_id, primary_subject, bill_type, introduced_year, action_year, top_action, sponsor_party, cosponsor_party, sponsor, starts_with("keyword_")) %>%
   mutate(primary_subject_x_bill_type = paste(primary_subject, bill_type, sep=" / "),
          primary_subject_x_introduced_year = paste(primary_subject, introduced_year, sep=" / "),
          primary_subject_x_action_year = paste(primary_subject, action_year, sep=" / "),
          primary_subject_x_top_action = paste(primary_subject, top_action, sep=" / "),
+         primary_subject_x_sponsor_party = paste(primary_subject, sponsor_party, sep=" / "),
          primary_subject_x_cosponsor_party = paste(primary_subject, cosponsor_party, sep=" / "))
 for (keyword in names(select(dfScanTextFlags, starts_with("keyword_")))) {
   dfGroups <- unite_(dfGroups, paste0("primary_subject_x_", keyword), 
