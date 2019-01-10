@@ -1144,3 +1144,114 @@ LoopGraphBarLineGroups <- function(df, xcol_list=NA, gcol_list=NA, bygroup=NA, n
   plots
 }
 
+
+SavePlotToFile <- function(plot, file, width=640, height=480, res=100) {
+  #' Save plot or list of plots to .png file(s).
+  #' Args:
+  #'   plot: plot object or list of plot objects to save to file(s)
+  #'   file: string, full path of output file (plot name is appended to end if saving a list)
+  #'   width: integer, width of output in pixels
+  #'   height: integer, height of output in pixels
+  #'   res: integer, resolution
+  #' Returns:
+  #'   NULL (saves output to file)
+  filestem <- gsub("\\.\\w{1,5}$", "", file)
+  if (class(plot)[1] != "list") {
+    filename <- paste0(filestem, ".png")
+    outfile <- png(filename, width=width, height=height, res=res)
+    capture.output(plot)
+    dev.off()
+  } else {
+    plotnames <- names(plot)
+    for (p in 1:length(plotnames)) {
+      plotname <- plotnames[p]
+      filesuffix <- gsub(",.*$", paste0("_", as.character(p)), tolower(plotname))
+      filename <- paste0(filestem, "_", filesuffix, ".png")
+      outfile <- png(filename, width=width, height=height, res=res)
+      capture.output(plot[plotname])
+      dev.off()
+    }
+  }
+  NULL
+}
+
+
+SaveCombinedDashboard <- function(outpath, outfile, title="", textTitle="", textContent=NULL,
+                                  graphs1Title="", graphs1Prefix="", graphs1Content=NULL,
+                                  graphs2Title="", graphs2Prefix="", graphs2Content=NULL,
+                                  graphs3Title="", graphs3Prefix="", graphs3Content=NULL) {
+  #' Save combined output from text summary and one or more plots as single dashboard file.
+  #' Args:
+  #'   outpath: string, path where image files are stored and where dashboard will be saved
+  #'   outfile: string, name of output file
+  #'   title: string, overall title for output file
+  #'   textTitle: string, title to use for top text portion of dashboard
+  #'   textContent: vector or list of vectors, html used for top text portion of dashboard
+  #'                (typically output of WriteGroupDescriptions function)
+  #'   graphs1Title: string, title to use for first graphs portion of dashboard
+  #'   graphs1Prefix: string, prefix for image files in first graphs portion of dashboard
+  #'   graphs1Content: plot or list of plots, images used for first graphs portion fo dashboard
+  #'                   (typically output of LoopGraphBarLineGroups function, only need names from file)
+  #'   graphs2Title: same as graphs1Title but for second graphs portion
+  #'   graphs2Prefix: same as graphs1Prefix but for second graphs portion
+  #'   graphs2Content: same as graphs1Content but for second graphs portion
+  #'   graphs3Title: same as graphs1Title but for third graphs portion
+  #'   graphs3Prefix: same as graphs1Prefix but for third graphs portion
+  #'   graphs3Content: same as graphs1Content but for third graphs portion
+  #' Returns:
+  #'   NULL (saves output to file)
+  fileStart <- c("<html>", "<head><h1>", title, "</h1></head>", "<body>", "<hr />")
+  fileEnd <- c("</body>", "</html>")
+  # text section
+  sepSection <- "<hr />"
+  if (!is.null(textContent)) {
+    section0 <- paste0("<h1>", textTitle, "</h1>")
+    if (class(textContent) != "list") {
+      textContent <- gsub("(</?)h1( *>)", "\\1h2\\2", textContent) # change h1 to h2
+      textContent <- gsub("(<table .*)border *= *0(>| .*>)", "\\1border=1 width=75%\\2", textContent) # change border=0 to border=1
+      section0 <- c(section0, textContent)
+    } else {
+      for (subsection in textContent) {
+        subsection <- gsub("(</?)h1( *>)", "\\1h2\\2", subsection) # change h1 to h2
+        subsection <- gsub("(<table .*)border *= *0(>| .*>)", "\\1border=1 width=75%\\2", subsection) # change border=0 to border=1
+        section0 <- c(section0, subsection)
+      }
+    }
+    section0 <- c(section0, sepSection)
+  } else {
+    section0 <- ""
+  }
+  # graphs sections
+  temp_GraphsContentToSection <- function(graphsTitle="", graphsPrefix="", graphsContent=NULL,
+                                          imgDelimiter="_", imgSuffix=".png", sepSection="<hr />") {
+    if (!is.null(graphsContent)) {
+      section <- paste0("<h1>", graphsTitle, "</h1>")
+      if (class(graphsContent) != "list") {
+        imgFile <- paste0(graphsPrefix, imgSuffix)
+        imgTag <- paste0("<p><img src='", imgFile, "'></p>")
+        section <- c(section, imgTag)
+      } else {
+        plotnames <- names(graphsContent)
+        for (p in 1:length(plotnames)) {
+          plotname <- plotnames[p]
+          filesuffix <- gsub(",.*$", paste0(imgDelimiter, as.character(p)), tolower(plotname))
+          imgFile <- paste0(graphsPrefix, imgDelimiter, filesuffix, imgSuffix)
+          imgTag <- paste0("<p><img src='", imgFile, "'></p>")
+          section <- c(section, imgTag)
+        }
+      }
+      section <- c(section, sepSection)
+    } else {
+      section <- ""
+    }
+    section
+  }
+  section1 <- temp_GraphsContentToSection(graphs1Title, graphs1Prefix, graphs1Content)
+  section2 <- temp_GraphsContentToSection(graphs2Title, graphs2Prefix, graphs2Content)
+  section3 <- temp_GraphsContentToSection(graphs3Title, graphs3Prefix, graphs3Content)
+  # output file
+  lines <- c(fileStart, section0, section1, section2, section3, fileEnd)
+  write(lines, file.path(outpath, outfile))
+  NULL
+}
+

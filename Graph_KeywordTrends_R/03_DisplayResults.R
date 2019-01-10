@@ -141,7 +141,37 @@ if (!dir.exists(output_dashboard)) {
   dir.create(output_dashboard, recursive=TRUE)
 }
 
-#TODO: build dashboards using text and graph outputs:
-# textSummary (list)
-# graphsBars (list), graphsLines (list), graphsLineGroups (list)
-# graphsDynamic (list of lists)
+SavePlotToFile(graphsBars, file=file.path(output_dashboard, "main.png"), height=640, width=1280)
+SavePlotToFile(graphsLines, file=file.path(output_dashboard, "main.png"), height=640, width=1280)
+SavePlotToFile(graphsLineGroups, file=file.path(output_dashboard, "group.png"), height=320, width=640)
+for (graphsDynamicSubset in graphsDynamic) {
+  SavePlotToFile(graphsDynamicSubset, file=file.path(output_dashboard, "dynamic.png"), height=640, width=1280)
+}
+
+SaveCombinedDashboard(
+  output_dashboard, "dashboard1_text.html", 
+  title=paste0(TITLE, " - Text Summary of Groups/Categories"),
+  textTitle="All Groups/Categories", textContent=textSummary
+)
+SaveCombinedDashboard(
+  output_dashboard, "dashboard2_subjects.html", 
+  title=paste0(TITLE, " - Summary of Primary Subjects"),
+  textTitle="Main Summary", textContent=textSummary[["primary_subject"]],
+  graphs1Title="Main Graphs", graphs1Prefix="main", graphs1Content=c(graphsBars, graphsLines),
+  graphs2Title="Group Graphs", graphs2Prefix="group", graphs2Content=graphsLineGroups
+)
+for (name in names(graphsDynamic)) {
+  if (name %in% names(textSummary)) {
+    textShown <- textSummary[[name]]
+  } else {
+    textShown <- "<p>No text summary available</p>"
+  }
+  graphsShown <- graphsDynamic[[name]]
+  SaveCombinedDashboard(
+    output_dashboard, paste0("dashboard3_dynamic_", name, ".html"), 
+    title=paste0(TITLE, " - Specific Information on: ", name),
+    textTitle="", textContent=textShown,
+    graphs1Title="", graphs1Prefix="dynamic", graphs1Content=graphsShown
+  )
+}
+
