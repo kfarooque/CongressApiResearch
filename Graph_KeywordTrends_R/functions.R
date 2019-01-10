@@ -825,7 +825,7 @@ BuildTextSummary <- function(group, text=NULL, df_keywords=NULL, df_features=NUL
       if (length(examples) > 3) {
         examples <- sample(examples, 3)
       }
-      examples <- substr(examples, 1, 96)
+      examples <- substr(examples, 1, 144)
       examples <- paste0(examples, collapse="\n")
       summary_g$examples <- examples
       rm(examples)
@@ -868,18 +868,19 @@ WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
   #' Returns:
   #'   vector of lines of HTML for group descriptions
   # Headers and separators
-  exampleCharLimit <- 320
+  exampleCharLimit <- 576
   if (is.null(title)) {
     title <- "Group Descriptions"
   } else {
     title <- as.character(title)
   }
-  header <- paste0("<h1>", title, " (", nrow(x), " groups)", "</h1>")
-  rowStart <- "<table border=0><tr><td>"
-  rowEnd <- "</td></tr></table>"
+  header <- c(paste0("<h2>", title, " (", nrow(x), " groups)", "</h2>"), "<p></p>", "<table border=1>")
+  rowStart <- "<tr><td>"
+  rowEnd <- "</td></tr>"
   rowIndent <- "&nbsp; &nbsp; &nbsp; "
+  footer <- c("</table>", "<p></p>")
   # Build lines
-  lines <- c(header, "<p></p>")
+  lines <- c(header)
   for (r in 1:nrow(x)) {
     row <- x[r, ]
     lineHeader <- paste0("<b>Group #", r, ":</b> ", row$group, "<br />")
@@ -909,9 +910,11 @@ WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
                   "<p>", lineHeader, lineCounts, lineKeywords, "</p>",
                   "<p>", lineFeatures, "</p>",
                   "<p>", lineExamples, "</p>",
+                  "<p></p>",
                   rowEnd)
     lines <- c(lines, newlines)
   }
+  lines <- c(lines, footer)
   lines
 }
 
@@ -1207,13 +1210,9 @@ SaveCombinedDashboard <- function(outpath, outfile, title="", textTitle="", text
   if (!is.null(textContent)) {
     section0 <- paste0("<h1>", textTitle, "</h1>")
     if (class(textContent) != "list") {
-      textContent <- gsub("(</?)h1( *>)", "\\1h2\\2", textContent) # change h1 to h2
-      textContent <- gsub("(<table .*)border *= *0(>| .*>)", "\\1border=1 width=75%\\2", textContent) # change border=0 to border=1
       section0 <- c(section0, textContent)
     } else {
       for (subsection in textContent) {
-        subsection <- gsub("(</?)h1( *>)", "\\1h2\\2", subsection) # change h1 to h2
-        subsection <- gsub("(<table .*)border *= *0(>| .*>)", "\\1border=1 width=75%\\2", subsection) # change border=0 to border=1
         section0 <- c(section0, subsection)
       }
     }

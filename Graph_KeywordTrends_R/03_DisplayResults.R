@@ -166,12 +166,16 @@ for (name in names(graphsDynamic)) {
   } else {
     textShown <- "<p>No text summary available</p>"
   }
-  graphsShown <- graphsDynamic[[name]]
+  if (name %in% names(namesList)) {
+    varLabel <- namesList[name]
+  } else {
+    varLabel <- name
+  }
   SaveCombinedDashboard(
     output_dashboard, paste0("dashboard3_dynamic_", name, ".html"), 
-    title=paste0(TITLE, " - Specific Information on: ", name),
+    title=paste0(TITLE, " - Specific Information on: ", varLabel),
     textTitle="", textContent=textShown,
-    graphs1Title="", graphs1Prefix="dynamic", graphs1Content=graphsShown
+    graphs1Title="", graphs1Prefix="dynamic", graphs1Content=graphsDynamic[[name]]
   )
 }
 
