@@ -441,7 +441,7 @@ BuildStopList <- function(vectors=NULL, manual=NULL, auto=TRUE) {
 #### DESCRIBE TEXT ####
 
 
-FlagTextKeywords <- function(text, labels=NULL, keywords="") {
+FlagTextKeywords <- function(text, labels=NULL, keywords=NULL, dropEmpty=TRUE) {
   #' Flag keyword(s) contained in text entries.
   #' Args:
   #'   text: vector of strings, each one a text entry to be scanned for keywords
@@ -449,17 +449,27 @@ FlagTextKeywords <- function(text, labels=NULL, keywords="") {
   #'           will be used for variable names (must be same length as keywords)
   #'   keywords: vector of strings, regex strings representing each keyword set scanned,
   #'             will be used to flag text entries (must be same length as labels)
+  #'   dropEmpty: boolean, whether to drop columns where all or no rows are flagged
   #' Returns:
   #'   data frame with columns for each keyword set being scanned (named using labels arg);
   #'   columns are boolean and indicate which text entries have the corresponding keyword set
-  if (is.null(labels)) {
-    labels <- paste0("keyword", 1:length(keywords))
-  }
   retVal <- data.frame(stringsAsFactors=FALSE, rows=1:length(text))
-  for (i in 1:length(keywords)) {
-    label <- labels[i]
-    keyword <- keywords[i]
-    retVal[label] <- grepl(paste0("\\b", keyword, "\\b"), text, ignore.case=TRUE)
+  if (!is.null(keywords)) {
+    for (i in 1:length(keywords)) {
+      if (is.null(labels)) {
+        label <- paste0("keyword", i)
+      } else {
+        label <- labels[i]
+      }
+      keyword <- keywords[i]
+      result <- grepl(paste0("\\b", keyword, "\\b"), text, ignore.case=TRUE)
+      if (dropEmpty) {
+        if (all(result) | !any(result)) {
+          result <- NULL
+        }
+      }
+      retVal[label] <- result
+    }
   }
   retVal <- select(retVal, -rows)
   retVal

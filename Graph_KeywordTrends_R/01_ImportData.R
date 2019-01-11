@@ -1,13 +1,18 @@
 #' Import and format data, build stop list.
 #' Inputs: results.txt, bills/_index_.txt, and bills/*.txt file(s) from the CongressApiResearch/DownloadResults project,
-#'         stoplist_manual.txt (optional) in the "resources" folder
-#' Outputs: dfResults, dfBills (saved to OUTPUT folder),
-#'          stoplist_auto.txt (saved to STOPLIST folder)
+#'         STOPLIST_FILE (optional, usually in the "resources" folder)
+#' Outputs: dfResults, dfBills, stoplist_full.txt
 
 source("config.R")
 source("functions.R")
 
 #### IMPORT DATA ####
+
+if (file.exists(STOPLIST_FILE)) {
+  stoplistManual <- STOPLIST_FILE
+} else {
+  stoplistManual <- NULL
+}
 
 listInputResults <- file.path(INPUT_ROOT, list.files(INPUT_ROOT, pattern="results.txt", recursive=TRUE))
 dfResults <- ImportCongressApiResults(listInputResults)
@@ -70,11 +75,6 @@ print(paste0("There were ", length(bills), " bills kept after filtering."))
 
 #### BUILD STOP LIST ####
 
-stoplistManual <- file.path(STOPLIST_FOLDER, "stoplist_manual.txt")
-if (!file.exists(stoplistManual)) {
-  stoplistManual <- NULL
-}
-
 dfTokenWords <- BuildTokensTfidf(dfResults$summary, dfResults$bill_id, ngram=1)
 listTopWords <- BuildCommonRareTerms(dfTokenWords, nCommon=0.01, nRare=0)
 stoplistWords <- BuildStopList(vectors=listTopWords$common, manual=stoplistManual, auto=TRUE)
@@ -87,4 +87,4 @@ if (!dir.exists(OUTPUT_FOLDER)) {
 }
 save(dfResults, file=file.path(OUTPUT_FOLDER, "dfResults.RData"))
 save(dfBills, file=file.path(OUTPUT_FOLDER, "dfBills.RData"))
-write(stoplistWords, file.path(STOPLIST_FOLDER, "stoplist_full.txt"))
+write(stoplistWords, file.path(OUTPUT_FOLDER, "stoplist_full.txt"))

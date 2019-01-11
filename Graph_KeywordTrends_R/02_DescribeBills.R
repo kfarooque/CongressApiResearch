@@ -1,6 +1,6 @@
 #' Describe bill content and flag keywords.
 #' Inputs: dfResults, dfBills, stoplist_full.txt (from Import Data step),
-#'         KEYWORD_FILE (usually in root folder)
+#'         KEYWORD_FILE (usually in the "resources" folder)
 #' Outputs: dfGroups, dfKeywordsByGroup, dfFeaturesByGroup (saved to OUTPUT folder)
 
 source("config.R")
@@ -8,7 +8,11 @@ source("functions.R")
 
 #### LOAD DATA ####
 
-labeledKeywords <- ImportKeywordFile(KEYWORD_FILE)
+if (file.exists(KEYWORD_FILE)) {
+  labeledKeywords <- ImportKeywordFile(KEYWORD_FILE)
+} else {
+  labeledKeywords <- NULL
+}
 
 if (!exists("dfResults")) {
   load(file.path(OUTPUT_FOLDER, "dfResults.RData"))
@@ -17,7 +21,7 @@ if (!exists("dfResults")) {
 #   load(file.path(OUTPUT_FOLDER, "dfBills.RData"))
 # }
 if (!exists("stoplistWords")) {
-  stoplistWords <- read.table(file.path(STOPLIST_FOLDER, "stoplist_full.txt"), header=FALSE, sep="", stringsAsFactors=FALSE)
+  stoplistWords <- read.table(file.path(OUTPUT_FOLDER, "stoplist_full.txt"), header=FALSE, sep="", stringsAsFactors=FALSE)
   stoplistWords <- unlist(stoplistWords)
 }
 
@@ -38,7 +42,9 @@ dfScanText <- dfResults %>%
 
 dfScanTextFlags <- FlagTextKeywords(dfScanText$text, labels=names(labeledKeywords), keywords=labeledKeywords)
 dfScanTextFlags <- ConvertFlagsToName(dfScanTextFlags, falsechar="none")
-names(dfScanTextFlags) <- paste0("keyword_", names(dfScanTextFlags))
+if (ncol(dfScanTextFlags) > 0) {
+  names(dfScanTextFlags) <- paste0("keyword_", names(dfScanTextFlags))
+}
 dfScanTextFlags <- cbind(dfScanText["bill_id"], dfScanTextFlags)
 
 #### DESCRIBE FEATURES ####
