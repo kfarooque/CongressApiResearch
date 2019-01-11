@@ -5,7 +5,7 @@
 #### LOAD PACKAGES ####
 
 # Load packages
-reqPackages <- c("readxl", "dplyr", "tidyr", "tidytext", "corpus", "tm", "SnowballC", "lubridate", "ggplot2")
+reqPackages <- c("readxl", "dplyr", "tidyr", "readr", "tidytext", "corpus", "tm", "SnowballC", "lubridate", "ggplot2")
 lapply(reqPackages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
 rm(reqPackages)
 
