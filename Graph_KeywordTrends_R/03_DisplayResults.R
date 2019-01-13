@@ -59,9 +59,11 @@ for (groupcol in groupcols) {
     df <- df[!grepl("^none$| / none$", df$group), ]
   }
   df <- df[df$count > 5,]
-  df$category <- groupcol
-  df <- select(df, category, group, count, share, examples, keywords, features)
-  dfTextSummary <- rbind(dfTextSummary, df)
+  if (nrow(df) > 0) {
+    df$category <- groupcol
+    df <- select(df, category, group, count, share, examples, keywords, features)
+    dfTextSummary <- rbind(dfTextSummary, df)
+  }
   rm(df)
 }
 rm(groupcol, groupcols, exampleText)
@@ -78,10 +80,13 @@ for (groupcol in groupcols) {
   features_normal <- features[!grepl("^.*_x_.*$", features)]
   features <- unique(c(features_combo, features_normal))
   features <- features[order(features)]
-  df <- rbind(data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=as.character(NA)),
-              data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=features))
-  dfGraphInstructions <- rbind(dfGraphInstructions, df)
-  rm(features, features_combo, features_normal, df)
+  if (length(features) > 0) {
+    df <- rbind(data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=as.character(NA)),
+                data.frame(stringsAsFactors=FALSE, category=groupcol, var1=groupcol, var2=features))
+    dfGraphInstructions <- rbind(dfGraphInstructions, df)
+    rm(df)
+  }
+  rm(features, features_combo, features_normal)
 }
 rm(groupcol, groupcols)
 

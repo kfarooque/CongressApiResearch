@@ -586,22 +586,28 @@ ExtractKeywordsViaDtm <- function(df, n=10, stoplist=NULL, dropNumbers=TRUE, ste
   docs <- tm_map(docs, content_transformer(tolower))
   docs <- tm_map(docs, removePunctuation)
   docs <- tm_map(docs, removeWords, stopwords("english"))
-  if (!is.null(stoplist)) {
-    docs <- tm_map(docs, removeWords, stoplist)
+  if (length(docs) > 0) {
+    if (!is.null(stoplist)) {
+      docs <- tm_map(docs, removeWords, stoplist)
+    }
+    if (dropNumbers) {
+      docs <- tm_map(docs, removeNumbers)
+    }
+    if (stemWords) {
+      docs <- tm_map(docs, stemDocument)
+    }
+    docs <- tm_map(docs, stripWhitespace)
   }
-  if (dropNumbers) {
-    docs <- tm_map(docs, removeNumbers)
-  }
-  if (stemWords) {
-    docs <- tm_map(docs, stemDocument)
-  }
-  docs <- tm_map(docs, stripWhitespace)
   # Build matrix
   dtm <- TermDocumentMatrix(docs)
   dtm_matrix <- as.matrix(dtm)
   dtm_vector <- sort(rowSums(dtm_matrix), decreasing=TRUE)
-  dtm_words <- data.frame(stringsAsFactors=FALSE, word=names(dtm_vector), freq=dtm_vector)
-  retVal <- dtm_words$word[1:n]
+  if (length(dtm_vector) > 0) {
+    dtm_words <- data.frame(stringsAsFactors=FALSE, word=names(dtm_vector), freq=dtm_vector)
+    retVal <- dtm_words$word[1:n]
+  } else {
+    retVal <- NULL
+  }
   retVal
 }
 
@@ -635,9 +641,12 @@ ExtractKeywordsByGroup <- function(text, group=NULL, n=10, stoplist=NULL, dropNu
     if (sum(df$group == group_g) > 5) {
       keywords_g <- ExtractKeywordsViaDtm(df[df$group == group_g, c("doc_id", "text")],
                                           n=n, stoplist=stoplist, dropNumbers=dropNumbers, stemWords=stemWords)
-      newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=keywords_g, rank=1:length(keywords_g))
+      if (length(keywords_g) > 0) {
+        newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=keywords_g, rank=1:length(keywords_g))
+      } else {
+        newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=as.character(NA), rank=as.character(NA))
+      }
     } else {
-      keywords_g <- ""
       newrows_g <- data.frame(stringsAsFactors=FALSE, group=group_g, keywords=as.character(NA), rank=as.character(NA))
     }
     retVal <- rbind(retVal, newrows_g)
@@ -686,7 +695,13 @@ ExtractFeaturesByGroup <- function(x, features, group) {
         } else {
           # build comparison of shares of each value
           trialsIn <- as.data.frame(stringsAsFactors=FALSE, table(values[group_flag]))
+          if (nrow(trialsIn) == 0) {
+            trialsIn <- data.frame(stringsAsFactors=FALSE, Var1="", Freq=0)[0, ]
+          }
           trialsOut <- as.data.frame(stringsAsFactors=FALSE, table(values[!group_flag]))
+          if (nrow(trialsOut) == 0) {
+            trialsOut <- data.frame(stringsAsFactors=FALSE, Var1="", Freq=0)[0, ]
+          }
           trials <- full_join(trialsIn, trialsOut, by="Var1", suffix=c(".in", ".out"))
           names(trials) <- c("value", "countIn", "countOut")
           trials[is.na(trials)] <- 0

@@ -94,7 +94,8 @@ for (groupcol in groupcols) {
   }
   df <- spread(df, rank, keywords, fill="") %>% 
     unite(keywords, -group, sep=", ") %>%
-    mutate(category = groupcol) %>%
+    mutate(category = groupcol,
+           keywords = gsub("(, )+$", "", keywords)) %>%
     select(category, group, keywords)
   dfKeywordsByGroup <- rbind(dfKeywordsByGroup, df)
 }
@@ -115,9 +116,11 @@ for (groupcol in groupcols) {
   }
   df <- df[!(grepl("^keyword_", df$feature) & grepl("^none$|^none / ", df$value)), ]
   df <- df[!(grepl("^.*_x_keyword_", df$feature) & grepl("^none$| / none$", df$value)), ]
-  df$category <- groupcol
-  df <- select(df, category, group, feature, value, comparison)
-  dfFeaturesByGroup <- rbind(dfFeaturesByGroup, df)
+  if (nrow(df) > 0) {
+    df$category <- groupcol
+    df <- select(df, category, group, feature, value, comparison)
+    dfFeaturesByGroup <- rbind(dfFeaturesByGroup, df)
+  }
 }
 rm(df)
 
