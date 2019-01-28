@@ -893,13 +893,13 @@ WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
   #' Returns:
   #'   vector of lines of HTML for group descriptions
   # Headers and separators
-  exampleCharLimit <- 576
+  exampleCharLimit <- 144
   if (is.null(title)) {
     title <- "Group Descriptions"
   } else {
     title <- as.character(title)
   }
-  header <- c(paste0("<h2>", title, " (", nrow(x), " groups)", "</h2>"), "<p></p>", "<table border=1>")
+  header <- c(paste0("<h2>", title, " (", nrow(x), " groups)", "</h2>"), "<p></p>", "<table>")
   rowStart <- "<tr><td>"
   rowEnd <- "</td></tr>"
   rowIndent <- "&nbsp; &nbsp; &nbsp; "
@@ -910,7 +910,7 @@ WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
     row <- x[r, ]
     lineHeader <- paste0("<b>Group #", r, ":</b> ", row$group, "<br />")
     lineCounts <- paste0("<b>Records:</b> ", row$count, " (", row$share * 100, "%)", "<br />")
-    lineKeywords <- paste0("<b>Keywords:</b> ", "<br />", rowIndent, row$keywords, "<br />")
+    lineKeywords <- paste0("<b>Keywords:</b> ", row$keywords, "<br />")
     vectorFeatures <- unlist(strsplit(row$features, "\n", fixed=TRUE))
     if (!is.null(name_list)) {
       if (length(vectorFeatures) > 0) {
@@ -925,18 +925,17 @@ WriteGroupDescriptions <- function(x, title=NULL, name_list=NULL) {
         }
       }
     }
-    lineFeatures <- paste0("<b>Notable Features:</b> ", "<br />",
-                           paste0(vectorFeatures, collapse="<br />"),
+    vectorExamples <- unlist(strsplit(row$examples, split="\n", fixed=TRUE))
+    vectorExamples <- substr(vectorExamples, 1, exampleCharLimit)
+    lineFeatures <- paste0("<b>Notable Features [Variable = Value (rate in group vs. rate out of group)]:</b> ", "<br />",
+                           paste0(paste0(rowIndent, vectorFeatures), collapse="<br />"),
                            "<br />")
     lineExamples <- paste0("<b>Document Examples:</b> ", "<br />",
-                           gsub("\n", "<br />", substr(row$examples, 1, exampleCharLimit), fixed=TRUE),
+                           paste0(paste0(rowIndent, vectorExamples), collapse="<br />"),
                            "<br />")
-    newlines <- c(rowStart, 
-                  "<p>", lineHeader, lineCounts, lineKeywords, "</p>",
-                  "<p>", lineFeatures, "</p>",
-                  "<p>", lineExamples, "</p>",
-                  "<p></p>",
-                  rowEnd)
+    newlines <- c(rowStart, "<p>",
+                  lineHeader, lineCounts, lineKeywords, lineFeatures, lineExamples,
+                  "</p>", rowEnd)
     lines <- c(lines, newlines)
   }
   lines <- c(lines, footer)
@@ -1228,10 +1227,24 @@ SaveCombinedDashboard <- function(outpath, outfile, title="", textTitle="", text
   #'   graphs3Content: same as graphs1Content but for third graphs portion
   #' Returns:
   #'   NULL (saves output to file)
-  fileStart <- c("<html>", "<head><h1>", title, "</h1></head>", "<body>", "<hr />")
+  # css definitions
+  css <- c(
+    "hr {border-width: 2px; color: #0000BB}",
+    "h1 {font-family: Georgia, Times, serif; font-size: 24pt; color: #000099; background-color: #F0F0FF; border-top: 2px solid; border-bottom: 2px solid}",
+    "h2 {font-family: Georgia, Times, serif; font-size: 20pt; color: #000066; background-color: #F6F6FF; border-top: 1px dashed}",
+    "h3 {font-family: Georgia, Times, serif; font-size: 16pt; color: #000033; background-color: #FCFCFF; border-top: 1px dotted}",
+    "p {font-family: Tahoma, Verdana, Arial, sans-serif; color: #000000; font-size: 10pt}",
+    "table {border-width: 1px; border-style: solid; border-spacing: 0px; border-color: #666699; background-color: #F9F9FF}",
+    "th,td {border-width: 1px; border-style: solid; border-spacing: 0px; border-color: #666699; padding: 12px; align: left; text-align: top}"
+  )
+  # file header/footer
+  fileStart <- c("<html><head><title>", title, "</title>",
+                 "<style type='text/css'><!--", css, "--></style>",
+                 "</head><body>",
+                 "<h1>", title, "</h1>")
   fileEnd <- c("</body>", "</html>")
   # text section
-  sepSection <- "<hr />"
+  sepSection <- "<p></p>"
   if (!is.null(textContent)) {
     section0 <- paste0("<h1>", textTitle, "</h1>")
     if (class(textContent) != "list") {
@@ -1247,7 +1260,7 @@ SaveCombinedDashboard <- function(outpath, outfile, title="", textTitle="", text
   }
   # graphs sections
   temp_GraphsContentToSection <- function(graphsTitle="", graphsPrefix="", graphsContent=NULL,
-                                          imgDelimiter="_", imgSuffix=".png", sepSection="<hr />") {
+                                          imgDelimiter="_", imgSuffix=".png", sepSection="<p></p>") {
     if (!is.null(graphsContent)) {
       section <- paste0("<h1>", graphsTitle, "</h1>")
       if (class(graphsContent) != "list") {
@@ -1274,7 +1287,7 @@ SaveCombinedDashboard <- function(outpath, outfile, title="", textTitle="", text
   section2 <- temp_GraphsContentToSection(graphs2Title, graphs2Prefix, graphs2Content)
   section3 <- temp_GraphsContentToSection(graphs3Title, graphs3Prefix, graphs3Content)
   # output file
-  lines <- c(fileStart, section0, section1, section2, section3, fileEnd)
+  lines <- c(fileStart, sepSection, section0, section1, section2, section3, sepSection, fileEnd)
   write(lines, file.path(outpath, outfile))
   NULL
 }
