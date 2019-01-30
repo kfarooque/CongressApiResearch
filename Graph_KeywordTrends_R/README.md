@@ -33,7 +33,7 @@ Build dashboard with graphs and information on bills downloaded via ProPublica's
   * `dfKeywordsByGroup.RData` extracted keywords to describe each group of data.
   * `dfFeaturesByGroup.RData` notable features based on comparing each group to the rest of population.
 * From Step 03, output to `results/*/dashboard`:
-  * `dashboard*.html` combined dashboards with topic descriptors and images.
+  * `dashboard*.html` combined dashboards with topic descriptors and images. **Refer to _Dashboards_ section for details.**
   * `*.png` various images that graph bills by various characteristics.
 
 # Operation
@@ -49,8 +49,6 @@ Build dashboard with graphs and information on bills downloaded via ProPublica's
   congress
   act
   acts
-  acted
-  acting
   ```
 5. (Optional) Define keywords to flag in bills: Create the file `keywords.txt` in the `resources` subfolder. Contents should contain one keyword and the terms used to flag them per row, in the format `keyword label = term 1, term 2, term 3, ...`. Example content:
   ```
@@ -74,3 +72,44 @@ Build dashboard with graphs and information on bills downloaded via ProPublica's
   source("03_DisplayResults.R")
   ```
 3. Review outputs in `results/*/dashboard/dashboard*.html`.
+
+# Dashboards
+
+Step 3 outputs graphs (.png files) and dashboards (.html files) to the `results/*/dashboards` subfolder. The dashboards collect and organize the graphs along with text summaries.
+
+### Files
+There are three groups of dashboards:
+
+1. `dashboard1_text.html` contains a text summary of each group's contents (e.g., each value of subject, each value of bill_type, each value of year_introduced, etc.), and no graphs.
+2. `dashboard2_subject.html` contains a text summary of subject groups, graphs of main categories (subject, subject by party, etc.), and graphs of subgroups (each subject by year by action, year by party, etc.).
+3. `dashboard3_dynamic_*.html` are multiple dashboards with contents based on the data fed into the process, where * is the variable name of interest. Each contains a text summary of groups for that variable, and graphs based on characteristics flagged as unusual for those groups.
+
+### Contents
+
+The text summary at the top of each dashboard describes each group (all records for each value of a given categorical variable); each cell has the following information:
+1. Group number and description.
+2. Number of records (and percent of total).
+3. Keywords for describing the group, based on summary or bill text.
+4. Notable features, based on assessing all other variables in the data and showing those for which there is a significant difference between records in this group versus the rest of the data.
+5. Document examples, based on a random pick of summary or bill text descriptions for that group.
+
+**EXAMPLE**
+```
+[1] Group #14: Health
+[2] Records: 3358 (11%)
+[3] Keywords: health, servic, care, medicar, drug, medic, individu, payment, establish, public
+[4] Notable Features [Variable = Value (rate in group vs. rate out of group)]:
+      Furthest Action = ACTIVE (92% vs 87%)
+      Cosponsor Party Lean = B (23% vs 19%)
+      Cosponsor Party Lean = R (32% vs 36%)
+[5] Document Examples:
+      H.R.2439: To amend the Public Health Service Act with respect to the Silvio O. Conte Senior Biomedical Research Service.
+      S.1756: A bill to amend section 403 of the Federal Food, Drug and Cosmetic Act to improve and clarify certain disclosure requirements for restau
+      H.R.1787: To amend title XVIII of the Social Security Act to provide for an extension of the Medicare-dependent hospital (MDH) program and the i
+```
+
+The main graphs (larger size) are either bar graphs of one or more categories, or line graphs of a category over time.
+
+The group graphs (smaller size) are separate line graphs of a category over time, one graph per value of the group.
+
+Running the program is the easy part; sifting through this output for meaning takes longer.
